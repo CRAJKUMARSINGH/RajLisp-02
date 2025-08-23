@@ -3,7 +3,7 @@ import numpy as np
 import ezdxf
 import tempfile
 from utils.dxf_utils import create_dxf_header, add_dimensions
-from utils.calculations import calculate_column_capacity
+from utils.calculations import calculate_rectangular_column_capacity
 
 def page_rectangular_column():
     st.title("⬜ Rectangular Column Designer")
@@ -57,9 +57,9 @@ def page_rectangular_column():
                 total_bars = 2 * (bars_width + bars_depth) - 4  # Corner bars not double counted
                 
                 # Perform design calculations
-                results = calculate_column_capacity(
-                    'rectangular', width, depth, height, concrete_grade, steel_grade,
-                    main_bars_dia, total_bars, axial_load, moment_x, moment_y
+                steel_area = total_bars * np.pi * (main_bars_dia/2)**2
+                results = calculate_rectangular_column_capacity(
+                    width, depth, height, concrete_grade, steel_grade, steel_area
                 )
 
                 # Create DXF drawing
@@ -116,16 +116,16 @@ def page_rectangular_column():
                     # Design verification
                     if results:
                         with st.expander("🔍 Design Verification", expanded=True):
-                            capacity_ratio = axial_load / results.get('axial_capacity', 1)
+                            capacity_ratio = axial_load / max(results.get('capacity', 1), 1)
                             
-                            st.write(f"**Design Capacity:** {results.get('axial_capacity', 0):.0f} kN")
+                            st.write(f"**Design Capacity:** {results.get('capacity', 0):.0f} kN")
                             st.write(f"**Applied Load:** {axial_load} kN")
                             st.write(f"**Capacity Utilization:** {capacity_ratio*100:.1f}%")
                             
                             if capacity_ratio <= 1.0:
                                 st.success(f"✅ Design is SAFE - Capacity Ratio: {capacity_ratio:.2f}")
                             else:
-                                st.error(f"❌ Design UNSAFE - Increase section or reinforcement")
+                                st.error("❌ Design UNSAFE - Increase section or reinforcement")
                                 st.error(f"Capacity Ratio: {capacity_ratio:.2f} > 1.0")
 
                 with col_download:
@@ -293,9 +293,9 @@ APPLIED LOADS:
 - Moment about Y-axis: {moment_y} kNm
 
 DESIGN VERIFICATION:
-- Design Capacity: {results.get('axial_capacity', 0):.0f} kN
-- Capacity Utilization: {(axial_load / results.get('axial_capacity', 1)) * 100:.1f}%
-- Design Status: {'SAFE' if axial_load <= results.get('axial_capacity', 0) else 'UNSAFE'}
+- Design Capacity: {results.get('capacity', 0):.0f} kN
+- Capacity Utilization: {(axial_load / max(results.get('capacity', 1), 1)) * 100:.1f}%
+- Design Status: {'SAFE' if axial_load <= results.get('capacity', 0) else 'UNSAFE'}
 
 REINFORCEMENT LAYOUT:
 - Clear Cover: 40mm (assumed)

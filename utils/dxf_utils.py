@@ -27,55 +27,120 @@ def create_dxf_header(doc, title="Structural Drawing"):
     return doc
 
 
-def add_dimensions(msp, start_point, end_point, dim_line_y_offset=100, text=""):
-    """Add dimension line between two points"""
-    try:
-        # Create dimension
-        dim = msp.add_linear_dim(
-            base=Vec3(start_point[0], start_point[1] + dim_line_y_offset, 0),
-            p1=Vec3(start_point[0], start_point[1], 0),
-            p2=Vec3(end_point[0], end_point[1], 0),
-            dimstyle="EZDXF",
-            dxfattribs={'layer': 'DIMENSIONS'}
-        )
-        
-        if text:
-            dim.dxf.text = text
+def add_dimensions(msp, start_point, end_point=None, dim_line_y_offset=100, text=""):
+    """Add dimension(s) between points.
+    
+    Supports:
+    - Single dimension: start_point (tuple), end_point (tuple), dim_line_y_offset (float), text (str)
+    - Bulk dimensions: start_point is a list of dimension specs. Each spec can be:
+        (p1, p2)
+        (p1, p2, base_point)
+        (p1, p2, base_point, text)
+    Where base_point is the location of the dimension line (used as 'base' for EZDXF).
+    """
+
+    def _add_one(p1, p2, base_point=None, dim_text=""):
+        try:
+            # Determine a sensible default base point if not provided
+            if base_point is None:
+                if abs(p1[1] - p2[1]) < 1e-9:  # Horizontal distance
+                    mid_x = (p1[0] + p2[0]) / 2
+                    base_point = (mid_x, max(p1[1], p2[1]) + dim_line_y_offset)
+                elif abs(p1[0] - p2[0]) < 1e-9:  # Vertical distance
+                    mid_y = (p1[1] + p2[1]) / 2
+                    base_point = (max(p1[0], p2[0]) + dim_line_y_offset, mid_y)
+                else:
+                    # If neither horizontal nor vertical, place dimension above the higher point
+                    mid_x = (p1[0] + p2[0]) / 2
+                    base_point = (mid_x, max(p1[1], p2[1]) + dim_line_y_offset)
+
+            dim = msp.add_linear_dim(
+                base=Vec3(base_point[0], base_point[1], 0),
+                p1=Vec3(p1[0], p1[1], 0),
+                p2=Vec3(p2[0], p2[1], 0),
+                dimstyle="EZDXF",
+                dxfattribs={'layer': 'DIMENSIONS'}
+            )
             
-        return dim
-    except Exception:
-        # Fallback: draw simple dimension lines
-        # Dimension line
-        msp.add_line(
-            (start_point[0], start_point[1] + dim_line_y_offset),
-            (end_point[0], end_point[1] + dim_line_y_offset),
-            dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
-        )
-        
-        # Extension lines
-        msp.add_line(
-            start_point,
-            (start_point[0], start_point[1] + dim_line_y_offset + 20),
-            dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
-        )
-        msp.add_line(
-            end_point,
-            (end_point[0], end_point[1] + dim_line_y_offset + 20),
-            dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
-        )
-        
-        # Dimension text
-        mid_x = (start_point[0] + end_point[0]) / 2
-        text_y = start_point[1] + dim_line_y_offset + 30
-        
-        dimension_value = abs(end_point[0] - start_point[0])
-        dim_text = text if text else f"{dimension_value:.0f}"
-        
-        msp.add_text(
-            dim_text,
-            height=50,
-            dxfattribs={'layer': 'TEXT', 'color': 3}
-        ).set_placement((mid_x, text_y), align="MIDDLE_CENTER")
+            if dim_text:
+                dim.dxf.text = dim_text
+                
+            return dim
+        except Exception:
+            # Fallback: draw simple dimension graphics
+            if abs(p1[1] - p2[1]) < 1e-9:  # Horizontal
+                y = max(p1[1], p2[1]) + dim_line_y_offset
+                # Dimension line
+                msp.add_line(
+                    (p1[0], y),
+                    (p2[0], y),
+                    dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
+                )
+                # Extension lines
+                msp.add_line(
+                    (p1[0], p1[1]),
+                    (p1[0], y + 20),
+                    dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
+                )
+                msp.add_line(
+                    (p2[0], p2[1]),
+                    (p2[0], y + 20),
+                    dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
+                )
+                # Text
+                mid_x = (p1[0] + p2[0]) / 2
+                dimension_value = abs(p2[0] - p1[0])
+                dim_text_value = dim_text if dim_text else f"{dimension_value:.0f}"
+                msp.add_text(
+                    dim_text_value,
+                    height=50,
+                    dxfattribs={'layer': 'TEXT', 'color': 3}
+                ).set_placement((mid_x, y + 30), align="MIDDLE_CENTER")
+            else:  # Vertical or inclined, default to vertical presentation
+                x = max(p1[0], p2[0]) + dim_line_y_offset
+                # Dimension line
+                msp.add_line(
+                    (x, p1[1]),
+                    (x, p2[1]),
+                    dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
+                )
+                # Extension lines
+                msp.add_line(
+                    (p1[0], p1[1]),
+                    (x + 20, p1[1]),
+                    dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
+                )
+                msp.add_line(
+                    (p2[0], p2[1]),
+                    (x + 20, p2[1]),
+                    dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
+                )
+                # Text
+                mid_y = (p1[1] + p2[1]) / 2
+                dimension_value = abs(p2[1] - p1[1])
+                dim_text_value = dim_text if dim_text else f"{dimension_value:.0f}"
+                msp.add_text(
+                    dim_text_value,
+                    height=50,
+                    dxfattribs={'layer': 'TEXT', 'color': 3}
+                ).set_placement((x + 30, mid_y), align="MIDDLE_CENTER")
+
+    # Bulk list mode
+    if isinstance(start_point, list):
+        for spec in start_point:
+            if len(spec) == 2:
+                p1, p2 = spec
+                _add_one(p1, p2)
+            elif len(spec) == 3:
+                p1, p2, base_point = spec
+                _add_one(p1, p2, base_point)
+            elif len(spec) >= 4:
+                p1, p2, base_point, dim_text = spec[:4]
+                _add_one(p1, p2, base_point, dim_text)
+        return None
+
+    # Single dimension mode (backward compatible)
+    return _add_one(start_point, end_point, None, text)
 
 
 def add_text_with_leader(msp, text, position, leader_points=None):

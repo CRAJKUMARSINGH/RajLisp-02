@@ -16,8 +16,7 @@ from . import (
     road_lsection,
     road_plan,
     road_cross_section,
-    pmgsy_road,
-    bridge
+    pmgsy_road
 )
 
 __all__ = [
@@ -33,6 +32,5 @@ __all__ = [
     'road_lsection',
     'road_plan',
     'road_cross_section',
-    'pmgsy_road',
-    'bridge'
+    'pmgsy_road'
 ]
