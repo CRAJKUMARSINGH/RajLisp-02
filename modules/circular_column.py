@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import ezdxf
 import tempfile
-from utils.dxf_utils import create_dxf_header, add_dimensions
+from utils.dxf_utils import create_dxf_header, add_dimensions, new_dxf_doc
 from utils.calculations import calculate_column_capacity
 
 def page_circular_column():
@@ -124,7 +124,7 @@ def page_circular_column():
 
 def create_circular_column_dxf(diameter, height, main_bar_dia, num_bars, tie_dia, tie_spacing, clear_cover):
     """Create DXF drawing for circular column"""
-    doc = ezdxf.new('R2010')
+    doc = new_dxf_doc()
     msp = doc.modelspace()
     
     # Drawing setup

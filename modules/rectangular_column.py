@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import ezdxf
 import tempfile
-from utils.dxf_utils import create_dxf_header, add_dimensions
+from utils.dxf_utils import create_dxf_header, add_dimensions, new_dxf_doc
 from utils.calculations import calculate_column_capacity
 
 def page_rectangular_column():
@@ -63,11 +63,105 @@ def page_rectangular_column():
                 )
 
                 # Create DXF drawing
-                doc = create_rectangular_column_dxf(
-                    width, depth, height, main_bars_dia, bars_width, bars_depth, 
-                    tie_dia, tie_spacing, clear_cover
-                )
-
+                doc = new_dxf_doc()
+                msp = doc.modelspace()
+                
+                # Drawing setup
+                doc.header['$INSUNITS'] = 4  # Millimeters
+                
+                # Column plan view
+                msp.add_lwpolyline([
+                    (-width/2, -depth/2),
+                    (width/2, -depth/2),
+                    (width/2, depth/2),
+                    (-width/2, depth/2),
+                    (-width/2, -depth/2)
+                ])
+                
+                # Add reinforcement bars in plan
+                effective_width = width - 2 * (clear_cover + tie_dia + main_bars_dia/2)
+                effective_depth = depth - 2 * (clear_cover + tie_dia + main_bars_dia/2)
+                
+                # Bars along width (top and bottom)
+                for i in range(bars_width):
+                    x_pos = -effective_width/2 + i * (effective_width / (bars_width - 1)) if bars_width > 1 else 0
+                    # Top bars
+                    msp.add_circle(center=(x_pos, depth/2 - clear_cover - tie_dia - main_bars_dia/2), radius=main_bars_dia/2)
+                    # Bottom bars
+                    msp.add_circle(center=(x_pos, -depth/2 + clear_cover + tie_dia + main_bars_dia/2), radius=main_bars_dia/2)
+                
+                # Bars along depth (excluding corners already placed)
+                for i in range(1, bars_depth - 1):
+                    y_pos = -effective_depth/2 + i * (effective_depth / (bars_depth - 1))
+                    # Left bars
+                    msp.add_circle(center=(-width/2 + clear_cover + tie_dia + main_bars_dia/2, y_pos), radius=main_bars_dia/2)
+                    # Right bars  
+                    msp.add_circle(center=(width/2 - clear_cover - tie_dia - main_bars_dia/2, y_pos), radius=main_bars_dia/2)
+                
+                # Add ties representation
+                tie_outline = [
+                    (-width/2 + clear_cover + tie_dia/2, -depth/2 + clear_cover + tie_dia/2),
+                    (width/2 - clear_cover - tie_dia/2, -depth/2 + clear_cover + tie_dia/2),
+                    (width/2 - clear_cover - tie_dia/2, depth/2 - clear_cover - tie_dia/2),
+                    (-width/2 + clear_cover + tie_dia/2, depth/2 - clear_cover - tie_dia/2),
+                    (-width/2 + clear_cover + tie_dia/2, -depth/2 + clear_cover + tie_dia/2)
+                ]
+                msp.add_lwpolyline(tie_outline, dxfattribs={'linetype': 'DASHED'})
+                
+                # Add center lines
+                msp.add_line((-width*0.75, 0), (width*0.75, 0), dxfattribs={'linetype': 'CENTER'})
+                msp.add_line((0, -depth*0.75), (0, depth*0.75), dxfattribs={'linetype': 'CENTER'})
+                
+                # Column elevation view (offset to the right)
+                elevation_x_offset = width * 2
+                
+                # Column outline in elevation
+                msp.add_lwpolyline([
+                    (elevation_x_offset - width/2, 0),
+                    (elevation_x_offset + width/2, 0),
+                    (elevation_x_offset + width/2, height),
+                    (elevation_x_offset - width/2, height),
+                    (elevation_x_offset - width/2, 0)
+                ])
+                
+                # Add ties in elevation
+                num_ties = int(height / tie_spacing) + 1
+                for i in range(num_ties):
+                    y_pos = i * tie_spacing
+                    if y_pos <= height:
+                        msp.add_lwpolyline([
+                            (elevation_x_offset - width/2 + clear_cover, y_pos),
+                            (elevation_x_offset + width/2 - clear_cover, y_pos),
+                            (elevation_x_offset + width/2 - clear_cover, y_pos + tie_dia),
+                            (elevation_x_offset - width/2 + clear_cover, y_pos + tie_dia),
+                            (elevation_x_offset - width/2 + clear_cover, y_pos)
+                        ], dxfattribs={'linetype': 'DASHED'})
+                
+                # Add main bars in elevation (vertical lines)
+                for i in range(bars_width):
+                    x_pos = elevation_x_offset - effective_width/2 + i * (effective_width / (bars_width - 1)) if bars_width > 1 else elevation_x_offset
+                    msp.add_line((x_pos, 0), (x_pos, height))
+                
+                # Add dimensions
+                add_dimensions(msp, [
+                    ((-width/2, -depth*0.75), (width/2, -depth*0.75), (0, -depth*0.9), f"{width}"),
+                    ((-width*0.75, -depth/2), (-width*0.75, depth/2), (-width*0.9, 0), f"{depth}"),
+                    ((elevation_x_offset - width/2, -height*0.1), (elevation_x_offset + width/2, -height*0.1), (elevation_x_offset, -height*0.2), f"{width}"),
+                    ((elevation_x_offset + width*0.75, 0), (elevation_x_offset + width*0.75, height), (elevation_x_offset + width*0.9, height/2), f"{height}")
+                ])
+                
+                # Add text annotations
+                msp.add_text(
+                    f"RECTANGULAR COLUMN\n{width}mm x {depth}mm x {height}mm",
+                    dxfattribs={'height': 50, 'style': 'STANDARD'}
+                ).set_placement((0, -depth*1.2))
+                
+                total_bars = 2 * (bars_width + bars_depth) - 4
+                msp.add_text(
+                    f"REINFORCEMENT:\n{total_bars}-⌀{main_bars_dia}mm MAIN BARS\n⌀{tie_dia}mm TIES @ {tie_spacing}mm C/C",
+                    dxfattribs={'height': 30, 'style': 'STANDARD'}
+                ).set_placement((elevation_x_offset, -depth*0.8))
+                
                 # Display results
                 col_results, col_download = st.columns([2, 1])
 
@@ -164,109 +258,6 @@ def page_rectangular_column():
             except Exception as e:
                 st.error(f"❌ Error generating design: {str(e)}")
                 st.error("Please verify your input parameters and try again.")
-
-def create_rectangular_column_dxf(width, depth, height, main_bar_dia, bars_width, bars_depth, tie_dia, tie_spacing, clear_cover):
-    """Create DXF drawing for rectangular column"""
-    doc = ezdxf.new('R2010')
-    msp = doc.modelspace()
-    
-    # Drawing setup
-    doc.header['$INSUNITS'] = 4  # Millimeters
-    
-    # Column plan view
-    msp.add_lwpolyline([
-        (-width/2, -depth/2),
-        (width/2, -depth/2),
-        (width/2, depth/2),
-        (-width/2, depth/2),
-        (-width/2, -depth/2)
-    ])
-    
-    # Add reinforcement bars in plan
-    effective_width = width - 2 * (clear_cover + tie_dia + main_bar_dia/2)
-    effective_depth = depth - 2 * (clear_cover + tie_dia + main_bar_dia/2)
-    
-    # Bars along width (top and bottom)
-    for i in range(bars_width):
-        x_pos = -effective_width/2 + i * (effective_width / (bars_width - 1)) if bars_width > 1 else 0
-        # Top bars
-        msp.add_circle(center=(x_pos, depth/2 - clear_cover - tie_dia - main_bar_dia/2), radius=main_bar_dia/2)
-        # Bottom bars
-        msp.add_circle(center=(x_pos, -depth/2 + clear_cover + tie_dia + main_bar_dia/2), radius=main_bar_dia/2)
-    
-    # Bars along depth (excluding corners already placed)
-    for i in range(1, bars_depth - 1):
-        y_pos = -effective_depth/2 + i * (effective_depth / (bars_depth - 1))
-        # Left bars
-        msp.add_circle(center=(-width/2 + clear_cover + tie_dia + main_bar_dia/2, y_pos), radius=main_bar_dia/2)
-        # Right bars  
-        msp.add_circle(center=(width/2 - clear_cover - tie_dia - main_bar_dia/2, y_pos), radius=main_bar_dia/2)
-    
-    # Add ties representation
-    tie_outline = [
-        (-width/2 + clear_cover + tie_dia/2, -depth/2 + clear_cover + tie_dia/2),
-        (width/2 - clear_cover - tie_dia/2, -depth/2 + clear_cover + tie_dia/2),
-        (width/2 - clear_cover - tie_dia/2, depth/2 - clear_cover - tie_dia/2),
-        (-width/2 + clear_cover + tie_dia/2, depth/2 - clear_cover - tie_dia/2),
-        (-width/2 + clear_cover + tie_dia/2, -depth/2 + clear_cover + tie_dia/2)
-    ]
-    msp.add_lwpolyline(tie_outline, dxfattribs={'linetype': 'DASHED'})
-    
-    # Add center lines
-    msp.add_line((-width*0.75, 0), (width*0.75, 0), dxfattribs={'linetype': 'CENTER'})
-    msp.add_line((0, -depth*0.75), (0, depth*0.75), dxfattribs={'linetype': 'CENTER'})
-    
-    # Column elevation view (offset to the right)
-    elevation_x_offset = width * 2
-    
-    # Column outline in elevation
-    msp.add_lwpolyline([
-        (elevation_x_offset - width/2, 0),
-        (elevation_x_offset + width/2, 0),
-        (elevation_x_offset + width/2, height),
-        (elevation_x_offset - width/2, height),
-        (elevation_x_offset - width/2, 0)
-    ])
-    
-    # Add ties in elevation
-    num_ties = int(height / tie_spacing) + 1
-    for i in range(num_ties):
-        y_pos = i * tie_spacing
-        if y_pos <= height:
-            msp.add_lwpolyline([
-                (elevation_x_offset - width/2 + clear_cover, y_pos),
-                (elevation_x_offset + width/2 - clear_cover, y_pos),
-                (elevation_x_offset + width/2 - clear_cover, y_pos + tie_dia),
-                (elevation_x_offset - width/2 + clear_cover, y_pos + tie_dia),
-                (elevation_x_offset - width/2 + clear_cover, y_pos)
-            ], dxfattribs={'linetype': 'DASHED'})
-    
-    # Add main bars in elevation (vertical lines)
-    for i in range(bars_width):
-        x_pos = elevation_x_offset - effective_width/2 + i * (effective_width / (bars_width - 1)) if bars_width > 1 else elevation_x_offset
-        msp.add_line((x_pos, 0), (x_pos, height))
-    
-    # Add dimensions
-    add_dimensions(msp, [
-        ((-width/2, -depth*0.75), (width/2, -depth*0.75), (0, -depth*0.9), f"{width}"),
-        ((-width*0.75, -depth/2), (-width*0.75, depth/2), (-width*0.9, 0), f"{depth}"),
-        ((elevation_x_offset - width/2, -height*0.1), (elevation_x_offset + width/2, -height*0.1), (elevation_x_offset, -height*0.2), f"{width}"),
-        ((elevation_x_offset + width*0.75, 0), (elevation_x_offset + width*0.75, height), (elevation_x_offset + width*0.9, height/2), f"{height}")
-    ])
-    
-    # Add text annotations
-    msp.add_text(
-        f"RECTANGULAR COLUMN\n{width}mm x {depth}mm x {height}mm",
-        dxfattribs={'height': 50, 'style': 'STANDARD'}
-    ).set_placement((0, -depth*1.2))
-    
-    total_bars = 2 * (bars_width + bars_depth) - 4
-    msp.add_text(
-        f"REINFORCEMENT:\n{total_bars}-⌀{main_bar_dia}mm MAIN BARS\n⌀{tie_dia}mm TIES @ {tie_spacing}mm C/C",
-        dxfattribs={'height': 30, 'style': 'STANDARD'}
-    ).set_placement((elevation_x_offset, -depth*0.8))
-    
-    return doc
 
 def generate_column_report(width, depth, height, concrete_grade, steel_grade, main_bar_dia, total_bars, 
                           tie_dia, tie_spacing, axial_load, moment_x, moment_y, results):

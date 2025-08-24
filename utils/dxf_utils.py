@@ -3,6 +3,38 @@ DXF utility functions for RajLisp Structural Design Suite
 """
 import ezdxf
 from ezdxf.math import Vec3
+import streamlit as st
+
+
+@st.cache_resource
+def get_dxf_setup():
+    """Return cached DXF setup configuration (layers, header defaults)."""
+    return {
+        'insunits': 4,  # Millimeters
+        'measurement': 1,  # Metric
+        'layers': [
+            ('OUTLINE', 1),  # Red
+            ('DIMENSIONS', 2),  # Yellow  
+            ('TEXT', 3),  # Green
+            ('CONSTRUCTION', 4),  # Cyan
+            ('REINFORCEMENT', 5),  # Blue
+            ('HATCHING', 6),  # Magenta
+        ],
+    }
+
+
+def new_dxf_doc(title: str = "Structural Drawing"):
+    """Create a new DXF document with standard header and layers applied."""
+    doc = ezdxf.new('R2010')
+    # Apply header defaults
+    setup = get_dxf_setup()
+    doc.header['$INSUNITS'] = setup['insunits']
+    doc.header['$MEASUREMENT'] = setup['measurement']
+    # Ensure layers exist
+    for layer_name, color in setup['layers']:
+        if layer_name not in doc.layers:
+            doc.layers.new(layer_name, dxfattribs={'color': color})
+    return doc
 
 
 def create_dxf_header(doc, title="Structural Drawing"):
@@ -27,8 +59,39 @@ def create_dxf_header(doc, title="Structural Drawing"):
     return doc
 
 
-def add_dimensions(msp, start_point, end_point, dim_line_y_offset=100, text=""):
-    """Add dimension line between two points"""
+def add_dimensions(msp, start_point, end_point=None, dim_line_y_offset=100, text=""):
+    """Add dimension line(s).
+    
+    Supports two modes:
+    1) Single dimension: pass start_point and end_point tuples
+    2) Batch mode: pass a list of specs in start_point where each spec is
+       (p1, p2, base, text) with base being the placement/base point
+    """
+    # Batch mode
+    if isinstance(start_point, list) and end_point is None:
+        added = []
+        for spec in start_point:
+            if not spec or len(spec) < 4:
+                continue
+            p1, p2, base, txt = spec
+            try:
+                dim = msp.add_linear_dim(
+                    base=Vec3(base[0], base[1], 0),
+                    p1=Vec3(p1[0], p1[1], 0),
+                    p2=Vec3(p2[0], p2[1], 0),
+                    dimstyle="EZDXF",
+                    dxfattribs={'layer': 'DIMENSIONS'}
+                )
+                if txt:
+                    dim.dxf.text = txt
+                added.append(dim)
+            except Exception:
+                # Fallback simple lines/text
+                msp.add_line(p1, p2, dxfattribs={'layer': 'DIMENSIONS', 'color': 2})
+            
+        return added
+
+    # Single dimension mode (original behavior)
     try:
         # Create dimension
         dim = msp.add_linear_dim(

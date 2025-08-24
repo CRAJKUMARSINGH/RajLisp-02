@@ -3,9 +3,11 @@ Structural calculation utilities for RajLisp Structural Design Suite
 """
 import numpy as np
 import math
+import streamlit as st
 
 
-def calculate_column_capacity(diameter, length, concrete_grade, steel_grade, steel_area):
+@st.cache_data
+def _circular_column_capacity_basic(diameter, length, concrete_grade, steel_grade, steel_area):
     """Calculate axial capacity of circular column"""
     # Concrete properties
     fck_values = {'M20': 20, 'M25': 25, 'M30': 30, 'M35': 35, 'M40': 40, 'M45': 45}
@@ -49,6 +51,7 @@ def calculate_column_capacity(diameter, length, concrete_grade, steel_grade, ste
     }
 
 
+@st.cache_data
 def calculate_rectangular_column_capacity(width, depth, length, concrete_grade, steel_grade, steel_area):
     """Calculate axial capacity of rectangular column"""
     # Concrete properties
@@ -93,6 +96,7 @@ def calculate_rectangular_column_capacity(width, depth, length, concrete_grade, 
     }
 
 
+@st.cache_data
 def calculate_footing_bearing_capacity(footing_width, footing_depth, soil_bearing_capacity, load):
     """Calculate footing bearing pressure and safety factor"""
     # Footing area
@@ -117,6 +121,7 @@ def calculate_footing_bearing_capacity(footing_width, footing_depth, soil_bearin
     }
 
 
+@st.cache_data
 def calculate_beam_moment_capacity(width, depth, concrete_grade, steel_grade, tension_steel, compression_steel=0):
     """Calculate moment capacity of beam section"""
     # Material properties
@@ -159,6 +164,7 @@ def calculate_beam_moment_capacity(width, depth, concrete_grade, steel_grade, te
     }
 
 
+@st.cache_data
 def calculate_shear_capacity(width, depth, concrete_grade, stirrup_diameter, stirrup_spacing):
     """Calculate shear capacity of beam"""
     fck_values = {'M20': 20, 'M25': 25, 'M30': 30, 'M35': 35, 'M40': 40, 'M45': 45}
@@ -187,6 +193,7 @@ def calculate_shear_capacity(width, depth, concrete_grade, stirrup_diameter, sti
     }
 
 
+@st.cache_data
 def calculate_deflection_check(span, depth, loading_type='uniformly_distributed'):
     """Check deflection limits"""
     # Basic span-to-depth ratios from IS 456
@@ -209,6 +216,7 @@ def calculate_deflection_check(span, depth, loading_type='uniformly_distributed'
     }
 
 
+@st.cache_data
 def calculate_staircase_design(riser, tread, waist_thickness, span, load):
     """Calculate staircase structural parameters"""
     # Effective span
@@ -242,6 +250,7 @@ def calculate_staircase_design(riser, tread, waist_thickness, span, load):
     }
 
 
+@st.cache_data
 def calculate_development_length(bar_diameter, concrete_grade, steel_grade):
     """Calculate development length for reinforcement"""
     fck_values = {'M20': 20, 'M25': 25, 'M30': 30, 'M35': 35, 'M40': 40, 'M45': 45}
@@ -262,6 +271,7 @@ def calculate_development_length(bar_diameter, concrete_grade, steel_grade):
     }
 
 
+@st.cache_data
 def check_crack_width(cover, bar_spacing, steel_stress):
     """Check crack width in concrete"""
     # Simplified crack width calculation
@@ -276,6 +286,7 @@ def check_crack_width(cover, bar_spacing, steel_stress):
     }
 
 
+@st.cache_data
 def calculate_footing_design(footing_type, footing_dimension, footing_thickness, column_load, 
                            soil_bearing_capacity, concrete_grade, steel_grade, main_bar_dia, 
                            main_bar_spacing, dist_bar_dia, dist_bar_spacing):
@@ -370,3 +381,77 @@ def calculate_footing_design(footing_type, footing_dimension, footing_thickness,
         'num_main_bars': num_bars,
         'effective_depth': effective_depth
     }
+
+
+@st.cache_data
+def calculate_column_capacity(section_type, width_or_dia, depth_or_dia, length, concrete_grade, steel_grade,
+                              main_bar_dia, num_bars, axial_load=0, moment_x=0, moment_y=0):
+	"""Dispatcher used by modules to compute axial capacity for circular/rectangular columns.
+	Returns keys matching module expectations (e.g., 'axial_capacity').
+	"""
+	# Compute steel area from bars
+	steel_area = num_bars * math.pi * (main_bar_dia/2)**2
+	if str(section_type).lower().startswith('circ'):
+		base = _circular_column_capacity_basic(width_or_dia, length, concrete_grade, steel_grade, steel_area)
+	else:
+		base = calculate_rectangular_column_capacity(width_or_dia, depth_or_dia, length, concrete_grade, steel_grade, steel_area)
+	return {
+		'axial_capacity': base.get('capacity', 0),
+		'area': base.get('area', 0),
+		'steel_ratio': base.get('steel_ratio', 0),
+		'slenderness_ratio': base.get('slenderness_ratio', 0),
+		'column_type': base.get('column_type', 'Short'),
+	}
+
+
+@st.cache_data
+def calculate_t_beam_capacity(flange_width, flange_thickness, web_width, web_depth, concrete_grade, steel_grade,
+                             bottom_bar_dia, num_bottom_bars, design_moment):
+	"""Simplified T-beam capacity estimation to support UI. Returns moment capacity and section properties."""
+	total_depth = flange_thickness + web_depth
+	# Effective depth assumption
+	effective_depth = total_depth * 0.9
+	# Use web width for conservative capacity
+	ast = num_bottom_bars * math.pi * (bottom_bar_dia/2)**2
+	base = calculate_beam_moment_capacity(web_width, total_depth, concrete_grade, steel_grade, ast)
+	moment_capacity = base.get('moment_capacity', 0)
+	# Estimate neutral axis and lever arm for display
+	xu = min(0.48 * effective_depth, (0.87 * 415 * ast) / (0.36 * (20 if concrete_grade=='M20' else 25) * web_width))
+	lever_arm = effective_depth - 0.42 * xu
+	# Section modulus rough estimate using web section
+	section_modulus = (web_width * total_depth**2) / 6
+	return {
+		'moment_capacity': moment_capacity,
+		'neutral_axis_depth': xu,
+		'lever_arm': lever_arm,
+		'section_modulus': section_modulus,
+	}
+
+
+@st.cache_data
+def calculate_l_beam_capacity(web_width, web_height, flange_width, flange_thickness, concrete_grade, steel_grade,
+                             web_main_dia, num_web_bars, flange_main_dia, design_moment):
+	"""Simplified L-beam capacity using web properties; returns keys used by module."""
+	total_depth = max(web_height, flange_thickness)
+	ast = num_web_bars * math.pi * (web_main_dia/2)**2
+	base = calculate_beam_moment_capacity(web_width, total_depth, concrete_grade, steel_grade, ast)
+	moment_capacity = base.get('moment_capacity', 0)
+	xu = 0.48 * 0.9 * total_depth
+	return {
+		'moment_capacity': moment_capacity,
+		'neutral_axis_depth': xu,
+		'section_modulus': (web_width * total_depth**2) / 6,
+	}
+
+
+@st.cache_data
+def calculate_beam_moment(depth, width, concrete_grade, steel_grade, main_bar_dia, num_main_bars, design_moment):
+	"""Wrapper for lintel: compute moment capacity with provided bars."""
+	ast = num_main_bars * math.pi * (main_bar_dia/2)**2
+	return calculate_beam_moment_capacity(width, depth, concrete_grade, steel_grade, ast)
+
+
+@st.cache_data
+def calculate_shear_reinforcement(depth, width, concrete_grade, stirrup_dia, stirrup_spacing, design_shear):
+	"""Wrapper for lintel: compute shear capacity using stirrups."""
+	return calculate_shear_capacity(width, depth, concrete_grade, stirrup_dia, stirrup_spacing)

@@ -1,0 +1,4 @@
+import streamlit as st
+from modules.circular_column_footing import page_circular_column_footing
+
+page_circular_column_footing()
