@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import ezdxf
 import tempfile
-from utils.dxf_utils import create_dxf_header, add_dimensions
+from utils.dxf_utils import add_dimensions
 from utils.calculations import calculate_beam_moment, calculate_shear_reinforcement
 
 def page_lintel():

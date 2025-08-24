@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import ezdxf
 import tempfile
-from utils.dxf_utils import create_dxf_header, add_dimensions
+from utils.dxf_utils import add_dimensions
 from utils.calculations import calculate_rectangular_column_capacity
 
 def page_rectangular_column():
@@ -58,7 +58,10 @@ def page_rectangular_column():
                 
                 # Perform design calculations
                 steel_area = total_bars * np.pi * (main_bars_dia/2)**2
-                results = calculate_rectangular_column_capacity(
+                @st.cache_data(show_spinner=False)
+                def _calc_rect(w, d, h, c, s, ast):
+                    return calculate_rectangular_column_capacity(w, d, h, c, s, ast)
+                results = _calc_rect(
                     width, depth, height, concrete_grade, steel_grade, steel_area
                 )
 

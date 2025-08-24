@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import ezdxf
 import tempfile
-from utils.dxf_utils import create_dxf_header, add_dimensions
+from utils.dxf_utils import add_dimensions
 from utils.calculations import calculate_column_capacity
 
 def page_circular_column():
@@ -52,10 +52,11 @@ def page_circular_column():
         with st.spinner("🔄 Generating circular column design..."):
             try:
                 # Perform design calculations
-                results = calculate_column_capacity(
-                    'circular', diameter, diameter, height, concrete_grade, steel_grade,
-                    main_bars_dia, num_bars, axial_load, moment_x, moment_y
-                )
+                steel_area = num_bars * np.pi * (main_bars_dia/2)**2
+                @st.cache_data(show_spinner=False)
+                def _calc_circ(dia, h, c, s, ast):
+                    return calculate_column_capacity(dia, h, c, s, ast)
+                results = _calc_circ(diameter, height, concrete_grade, steel_grade, steel_area)
 
                 # Create DXF drawing
                 doc = create_circular_column_dxf(

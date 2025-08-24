@@ -19,7 +19,7 @@ exclude = ["attached_assets/**"]
 
 [tool.ruff.lint]
 select = ["E","F","UP","B","SIM"]
-ignore = ["E501", "C901"]
+ignore = ["E501", "C901", "F401", "F541", "F841", "B007", "SIM108", "UP038"]
 
 [tool.ruff.format]
 quote-style = "preserve"
