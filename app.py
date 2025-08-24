@@ -149,6 +149,8 @@ def main():
         load_module("l_beam").page_l_beam()
     elif page == "🪜 Staircase":
         load_module("staircase").page_staircase()
+    elif page == "🌉 Bridge":
+        load_module("bridge").page_bridge()
 
     elif page == "🛣️ Road L-Section":
         load_module("road_lsection").page_road_lsection()
