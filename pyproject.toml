@@ -15,9 +15,10 @@ target-version = ["py311"]
 
 [tool.ruff]
 line-length = 120
+exclude = ["attached_assets/**"]
 
 [tool.ruff.lint]
-select = ["E","F","I","UP","B","SIM"]
+select = ["E","F","UP","B","SIM"]
 ignore = ["E501", "C901"]
 
 [tool.ruff.format]
