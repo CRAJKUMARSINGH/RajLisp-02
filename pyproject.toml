@@ -15,8 +15,10 @@ target-version = ["py311"]
 
 [tool.ruff]
 line-length = 120
-select = ["E","F","I","UP","B","SIM","C90"]
-ignore = []
+
+[tool.ruff.lint]
+select = ["E","F","I","UP","B","SIM"]
+ignore = ["E501", "C901"]
 
 [tool.ruff.format]
 quote-style = "preserve"

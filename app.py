@@ -1,12 +1,14 @@
-import streamlit as st
 import os
 import sys
+
+import streamlit as st
 
 # Add the modules directory to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import all page modules lazily
 import importlib
+
 
 def load_module(name):
     try:
@@ -126,7 +128,7 @@ def main():
         """)
 
     # Page routing with enhanced UI
-    if page == "🏠 Home" or not 'page' in locals():
+    if page == "🏠 Home" or 'page' not in locals():
         show_home_page()
     elif page == "🔘 Circular Column":
         load_module("circular_column").page_circular_column()
