@@ -316,7 +316,7 @@ def create_road_cross_section_dxf(carriageway_width, shoulder_width, median_widt
     layer_colors = [2, 3, 4, 5]
     
     cumulative_depth = 0
-    for i, (depth, name, color) in enumerate(zip(layer_depths, layer_names, layer_colors)):
+    for i, (depth, name, color) in enumerate(zip(layer_depths, layer_names, layer_colors, strict=False)):
         if depth > 0:
             cumulative_depth += depth
             layer_y = center_y - scale_height(cumulative_depth)

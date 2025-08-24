@@ -1,22 +1,21 @@
-import streamlit as st
 import os
 import sys
+
+import streamlit as st
 
 # Add the modules directory to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Import all page modules
-try:
-    from modules import (
-        circular_column, rectangular_column, rect_column_footing, 
-        circular_column_footing, sunshade, lintel, t_beam, l_beam,
-        staircase, road_lsection, road_plan, road_cross_section,
-        pmgsy_road, bridge
-    )
-except ImportError as e:
-    st.error(f"Error importing modules: {str(e)}")
-    st.error("Please make sure all module files exist in the modules/ directory.")
-    st.stop()
+# Import all page modules lazily
+import importlib
+
+
+def load_module(name):
+    try:
+        return importlib.import_module(f"modules.{name}")
+    except Exception as e:
+        st.error(f"Error loading module '{name}': {e}")
+        st.stop()
 
 def main():
     st.set_page_config(
@@ -130,35 +129,37 @@ def main():
         """)
 
     # Page routing with enhanced UI
-    if page == "🏠 Home" or not 'page' in locals():
+    if page == "🏠 Home" or 'page' not in locals():
         show_home_page()
     elif page == "🔘 Circular Column":
-        circular_column.page_circular_column()
+        load_module("circular_column").page_circular_column()
     elif page == "⬜ Rectangular Column":
-        rectangular_column.page_rectangular_column()
+        load_module("rectangular_column").page_rectangular_column()
     elif page == "🔘🦶 Circular Column + Footing":
-        circular_column_footing.page_circular_column_footing()
+        load_module("circular_column_footing").page_circular_column_footing()
     elif page == "⬜🦶 Rectangular Column + Footing":
-        rect_column_footing.page_rect_column_footing()
+        load_module("rect_column_footing").page_rect_column_footing()
     elif page == "🌞 Sunshade":
-        sunshade.page_sunshade()
+        load_module("sunshade").page_sunshade()
     elif page == "🔗 Lintel":
-        lintel.page_lintel()
+        load_module("lintel").page_lintel()
     elif page == "📐 T-Beam":
-        t_beam.page_t_beam()
+        load_module("t_beam").page_t_beam()
     elif page == "📏 L-Beam":
-        l_beam.page_l_beam()
+        load_module("l_beam").page_l_beam()
     elif page == "🪜 Staircase":
-        staircase.page_staircase()
+        load_module("staircase").page_staircase()
+    elif page == "🌉 Bridge":
+        load_module("bridge").page_bridge()
 
     elif page == "🛣️ Road L-Section":
-        road_lsection.page_road_lsection()
+        load_module("road_lsection").page_road_lsection()
     elif page == "🗺️ Road Plan":
-        road_plan.page_road_plan()
+        load_module("road_plan").page_road_plan()
     elif page == "✂️ Road Cross Section":
-        road_cross_section.page_road_cross_section()
+        load_module("road_cross_section").page_road_cross_section()
     elif page == "🛤️ PMGSY Road":
-        pmgsy_road.page_pmgsy_road()
+        load_module("pmgsy_road").page_pmgsy_road()
 
 def show_home_page():
     st.markdown('<div class="main-header"><h1>🏗️ RajLisp Structural Design Suite</h1><p>Professional CAD Tools for Civil Engineers</p></div>', unsafe_allow_html=True)

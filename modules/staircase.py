@@ -234,7 +234,7 @@ def page_staircase():
                     st.download_button(
                         label="📄 Download Report",
                         data=report,
-                        file_name=f"staircase_design_report.txt",
+                        file_name="staircase_design_report.txt",
                         mime="text/plain"
                     )
 
