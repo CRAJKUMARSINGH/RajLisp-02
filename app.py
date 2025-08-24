@@ -83,7 +83,8 @@ def main():
         ]
         
         misc_modules = [
-            "🪜 Staircase"
+            "🪜 Staircase",
+            "🌉 Bridge"
         ]
         
         road_modules = [
