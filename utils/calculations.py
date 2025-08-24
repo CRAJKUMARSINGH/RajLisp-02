@@ -3,8 +3,10 @@ Structural calculation utilities for RajLisp Structural Design Suite
 """
 import numpy as np
 import math
+from functools import lru_cache
 
 
+@lru_cache(maxsize=256)
 def calculate_column_capacity(diameter, length, concrete_grade, steel_grade, steel_area):
     """Calculate axial capacity of circular column"""
     # Concrete properties
@@ -49,6 +51,7 @@ def calculate_column_capacity(diameter, length, concrete_grade, steel_grade, ste
     }
 
 
+@lru_cache(maxsize=256)
 def calculate_rectangular_column_capacity(width, depth, length, concrete_grade, steel_grade, steel_area):
     """Calculate axial capacity of rectangular column"""
     # Concrete properties
@@ -93,6 +96,7 @@ def calculate_rectangular_column_capacity(width, depth, length, concrete_grade, 
     }
 
 
+@lru_cache(maxsize=256)
 def calculate_footing_bearing_capacity(footing_width, footing_depth, soil_bearing_capacity, load):
     """Calculate footing bearing pressure and safety factor"""
     # Footing area
@@ -117,6 +121,7 @@ def calculate_footing_bearing_capacity(footing_width, footing_depth, soil_bearin
     }
 
 
+@lru_cache(maxsize=256)
 def calculate_beam_moment_capacity(width, depth, concrete_grade, steel_grade, tension_steel, compression_steel=0):
     """Calculate moment capacity of beam section"""
     # Material properties
@@ -159,6 +164,7 @@ def calculate_beam_moment_capacity(width, depth, concrete_grade, steel_grade, te
     }
 
 
+@lru_cache(maxsize=256)
 def calculate_shear_capacity(width, depth, concrete_grade, stirrup_diameter, stirrup_spacing):
     """Calculate shear capacity of beam"""
     fck_values = {'M20': 20, 'M25': 25, 'M30': 30, 'M35': 35, 'M40': 40, 'M45': 45}
@@ -187,6 +193,7 @@ def calculate_shear_capacity(width, depth, concrete_grade, stirrup_diameter, sti
     }
 
 
+@lru_cache(maxsize=256)
 def calculate_deflection_check(span, depth, loading_type='uniformly_distributed'):
     """Check deflection limits"""
     # Basic span-to-depth ratios from IS 456
@@ -209,6 +216,7 @@ def calculate_deflection_check(span, depth, loading_type='uniformly_distributed'
     }
 
 
+@lru_cache(maxsize=256)
 def calculate_staircase_design(riser, tread, waist_thickness, span, load):
     """Calculate staircase structural parameters"""
     # Effective span
@@ -242,6 +250,7 @@ def calculate_staircase_design(riser, tread, waist_thickness, span, load):
     }
 
 
+@lru_cache(maxsize=256)
 def calculate_development_length(bar_diameter, concrete_grade, steel_grade):
     """Calculate development length for reinforcement"""
     fck_values = {'M20': 20, 'M25': 25, 'M30': 30, 'M35': 35, 'M40': 40, 'M45': 45}
@@ -262,6 +271,7 @@ def calculate_development_length(bar_diameter, concrete_grade, steel_grade):
     }
 
 
+@lru_cache(maxsize=256)
 def check_crack_width(cover, bar_spacing, steel_stress):
     """Check crack width in concrete"""
     # Simplified crack width calculation
@@ -276,6 +286,7 @@ def check_crack_width(cover, bar_spacing, steel_stress):
     }
 
 
+@lru_cache(maxsize=128)
 def calculate_footing_design(footing_type, footing_dimension, footing_thickness, column_load, 
                            soil_bearing_capacity, concrete_grade, steel_grade, main_bar_dia, 
                            main_bar_spacing, dist_bar_dia, dist_bar_spacing):
