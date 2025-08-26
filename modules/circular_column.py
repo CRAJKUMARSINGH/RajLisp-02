@@ -52,9 +52,9 @@ def page_circular_column():
         with st.spinner("🔄 Generating circular column design..."):
             try:
                 # Perform design calculations
+                steel_area = num_bars * np.pi * (main_bars_dia/2)**2
                 results = calculate_column_capacity(
-                    'circular', diameter, diameter, height, concrete_grade, steel_grade,
-                    main_bars_dia, num_bars, axial_load, moment_x, moment_y
+                    diameter, height, concrete_grade, steel_grade, steel_area
                 )
 
                 # Create DXF drawing
@@ -83,7 +83,6 @@ def page_circular_column():
                         with summary_col2:
                             st.markdown("**Reinforcement**")
                             st.write(f"• Main Bars: {num_bars} - ⌀{main_bars_dia} mm")
-                            steel_area = num_bars * np.pi * (main_bars_dia/2)**2
                             steel_percent = (steel_area / (np.pi * (diameter/2)**2)) * 100
                             st.write(f"• Steel Area: {steel_area:.0f} mm²")
                             st.write(f"• Steel %: {steel_percent:.2f}%")

@@ -27,31 +27,99 @@ def create_dxf_header(doc, title="Structural Drawing"):
     return doc
 
 
-def add_dimensions(msp, start_point, end_point, dim_line_y_offset=100, text=""):
-    """Add dimension line between two points"""
+def add_dimensions(msp, dims_or_start, end_point=None, dim_line_y_offset=100, text=""):
+    """Add one or multiple dimension lines.
+
+    Supports two calling styles:
+    - New style (preferred): add_dimensions(msp, [ (p1, p2, base, label), ... ])
+      where p1, p2, base are (x, y) tuples and label is str.
+    - Legacy style: add_dimensions(msp, start_point, end_point, dim_line_y_offset=100, text="")
+    """
     try:
-        # Create dimension
+        # New style: list of dimension specs
+        if isinstance(dims_or_start, (list, tuple)) and end_point is None:
+            for spec in dims_or_start:
+                if not isinstance(spec, (list, tuple)) or len(spec) < 3:
+                    continue
+                p1, p2 = spec[0], spec[1]
+                base = spec[2] if len(spec) > 2 else (
+                    ((p1[0] + p2[0]) / 2, max(p1[1], p2[1]) + 100)
+                )
+                label = spec[3] if len(spec) > 3 else ""
+
+                try:
+                    dim = msp.add_linear_dim(
+                        base=Vec3(base[0], base[1], 0),
+                        p1=Vec3(p1[0], p1[1], 0),
+                        p2=Vec3(p2[0], p2[1], 0),
+                        dimstyle="EZDXF",
+                        dxfattribs={'layer': 'DIMENSIONS'}
+                    )
+                    if label:
+                        dim.dxf.text = label
+                except Exception:
+                    # Fallback drawing when dimension entity fails
+                    is_vertical = abs(p1[0] - p2[0]) < 1e-6
+                    if is_vertical:
+                        # Dimension line at x = base.x
+                        msp.add_line(
+                            (base[0], p1[1]),
+                            (base[0], p2[1]),
+                            dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
+                        )
+                        # Extension lines
+                        msp.add_line(p1, (base[0], p1[1]), dxfattribs={'layer': 'DIMENSIONS', 'color': 2})
+                        msp.add_line(p2, (base[0], p2[1]), dxfattribs={'layer': 'DIMENSIONS', 'color': 2})
+                        # Text placement
+                        mid_y = (p1[1] + p2[1]) / 2
+                        dim_text = label if label else f"{abs(p2[1] - p1[1]):.0f}"
+                        msp.add_text(
+                            dim_text,
+                            height=50,
+                            dxfattribs={'layer': 'TEXT', 'color': 3}
+                        ).set_placement((base[0], mid_y), align="MIDDLE_RIGHT")
+                    else:
+                        # Horizontal dimension line at y = base.y
+                        msp.add_line(
+                            (p1[0], base[1]),
+                            (p2[0], base[1]),
+                            dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
+                        )
+                        # Extension lines
+                        msp.add_line(p1, (p1[0], base[1]), dxfattribs={'layer': 'DIMENSIONS', 'color': 2})
+                        msp.add_line(p2, (p2[0], base[1]), dxfattribs={'layer': 'DIMENSIONS', 'color': 2})
+                        # Text placement
+                        mid_x = (p1[0] + p2[0]) / 2
+                        dim_text = label if label else f"{abs(p2[0] - p1[0]):.0f}"
+                        msp.add_text(
+                            dim_text,
+                            height=50,
+                            dxfattribs={'layer': 'TEXT', 'color': 3}
+                        ).set_placement((mid_x, base[1] + 30), align="MIDDLE_CENTER")
+            return
+
+        # Legacy single-dimension style
+        start_point = dims_or_start
+        base = (start_point[0], start_point[1] + dim_line_y_offset)
         dim = msp.add_linear_dim(
-            base=Vec3(start_point[0], start_point[1] + dim_line_y_offset, 0),
+            base=Vec3(base[0], base[1], 0),
             p1=Vec3(start_point[0], start_point[1], 0),
             p2=Vec3(end_point[0], end_point[1], 0),
             dimstyle="EZDXF",
             dxfattribs={'layer': 'DIMENSIONS'}
         )
-        
         if text:
             dim.dxf.text = text
-            
         return dim
     except Exception:
-        # Fallback: draw simple dimension lines
+        # Fallback for legacy single-dimension style
+        start_point = dims_or_start
         # Dimension line
         msp.add_line(
             (start_point[0], start_point[1] + dim_line_y_offset),
             (end_point[0], end_point[1] + dim_line_y_offset),
             dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
         )
-        
         # Extension lines
         msp.add_line(
             start_point,
@@ -63,14 +131,11 @@ def add_dimensions(msp, start_point, end_point, dim_line_y_offset=100, text=""):
             (end_point[0], end_point[1] + dim_line_y_offset + 20),
             dxfattribs={'layer': 'DIMENSIONS', 'color': 2}
         )
-        
-        # Dimension text
+        # Text
         mid_x = (start_point[0] + end_point[0]) / 2
         text_y = start_point[1] + dim_line_y_offset + 30
-        
         dimension_value = abs(end_point[0] - start_point[0])
         dim_text = text if text else f"{dimension_value:.0f}"
-        
         msp.add_text(
             dim_text,
             height=50,
