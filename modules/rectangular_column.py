@@ -3,7 +3,7 @@ import numpy as np
 import ezdxf
 import tempfile
 from utils.dxf_utils import create_dxf_header, add_dimensions
-from utils.calculations import calculate_column_capacity
+from utils.calculations import calculate_rectangular_column_capacity
 
 def page_rectangular_column():
     st.title("⬜ Rectangular Column Designer")
@@ -57,9 +57,9 @@ def page_rectangular_column():
                 total_bars = 2 * (bars_width + bars_depth) - 4  # Corner bars not double counted
                 
                 # Perform design calculations
-                results = calculate_column_capacity(
-                    'rectangular', width, depth, height, concrete_grade, steel_grade,
-                    main_bars_dia, total_bars, axial_load, moment_x, moment_y
+                steel_area = total_bars * np.pi * (main_bars_dia/2)**2
+                results = calculate_rectangular_column_capacity(
+                    width, depth, height, concrete_grade, steel_grade, steel_area
                 )
 
                 # Create DXF drawing

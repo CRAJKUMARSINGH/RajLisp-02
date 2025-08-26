@@ -42,6 +42,7 @@ def calculate_column_capacity(diameter, length, concrete_grade, steel_grade, ste
     
     return {
         'capacity': p_design / 1000,  # Convert to kN
+        'axial_capacity': p_design / 1000,
         'area': area,
         'steel_ratio': steel_ratio * 100,  # Percentage
         'slenderness_ratio': slenderness_ratio,
@@ -86,6 +87,7 @@ def calculate_rectangular_column_capacity(width, depth, length, concrete_grade, 
     
     return {
         'capacity': p_design / 1000,  # Convert to kN
+        'axial_capacity': p_design / 1000,
         'area': area,
         'steel_ratio': steel_ratio * 100,
         'slenderness_ratio': slenderness_ratio,
