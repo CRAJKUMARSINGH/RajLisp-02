@@ -1,0 +1,57 @@
+GUIDE WHAT TO BE DONE FOR EFFICIENCY AND MODERNIZATION?
+Efficiency (runtime and memory)
+
+    Cache expensive work: use st.cache_data for pure calculations and st.cache_resource for ezdxf style/layer setup and any heavy objects.
+    Lazy-load modules: import specific modules.* only when selected (reduce initial load, memory).
+    Batch DXF entities: create blocks for repeated geometry (ties, gridlines) and insert as references; minimize per-entity text/dimension calls inside tight loops.
+    Vectorize math: ensure loops in utils/calculations.py use NumPy operations where beneficial; precompute constants.
+    Avoid repeated style setup: move layer/dimstyle creation into a single cached initializer and reuse.
+    Defer downloads: generate DXF/report only after submit, not on every rerun.
+
+Modern architecture and code quality
+
+    Add type hints across codebase; run mypy in CI.
+    Enforce style/quality with ruff (lint + format) and black.
+    Extract constants and magic numbers to utils/constants.py.
+    Introduce domain models with dataclasses/pydantic for validated inputs.
+    Split modules/ into subpackages (columns, beams, roads) for clarity.
+
+Streamlit app structure and UX
+
+    Use native multipage via pages/ directory; each tool becomes a page instead of manual radios.
+    Add input schemas and validation messages; disable submit until valid.
+    Provide presets/templates for common designs; add a “Reset to defaults”.
+    Use st.tabs within pages for Inputs / Results / CAD / Report.
+    Zip downloads: bundle DXF + report in one download.
+    Persist user choices with st.session_state; add “Copy permalink” (query params).
+
+Testing and reliability
+
+    Unit tests for utils/calculations.py (pytest, parametrized cases).
+    Golden-file tests for DXF: generate, audit with ezdxf.audit, and compare entity counts/attributes.
+    Smoke test Streamlit with Playwright (headless) to ensure pages load.
+    Add python -m py_compile, ruff, mypy, and tests to CI.
+
+CI/CD and automation
+
+    GitHub Actions: matrix for 3.10–3.12; cache pip; run lint/type/test; attach artifacts (DXF samples).
+    Dependabot/Renovate for dependency updates with auto-PRs.
+    Pre-commit hooks: ruff, black, mypy, pyproject-fmt.
+
+Deployment and packaging
+
+    Pin versions (avoid floating “>=”) for reproducibility.
+    Provide Dockerfile and optional devcontainer.json.
+    Add README deploy section and streamlit config notes; include screenshots.
+
+Security and robustness
+
+    Sanitize filenames for downloads; avoid unsafe paths.
+    Validate numeric ranges rigorously; guard divide-by-zero and unit mistakes.
+    Add a central error handler utility; log with logging to a file and optionally Sentry.
+
+Documentation
+
+    Expand README.md with features, quickstart, module matrix, and examples.
+    API docs for utilities via mkdocs or pdoc.
+    Include engineering references (IS codes) and assumptions per module.

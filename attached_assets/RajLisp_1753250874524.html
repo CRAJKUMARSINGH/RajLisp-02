@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RajLisp Civil Engineering Studio - Modernized CAD Automation</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .canvas-container { border: 2px solid #e5e7eb; border-radius: 8px; background: #fafafa; }
+        .parameter-panel { background: linear-gradient(145deg, #f8fafc, #e2e8f0); }
+        .engineering-grid { background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px); background-size: 20px 20px; }
+        .dimension-line { stroke: #374151; stroke-width: 1; fill: none; }
+        .dimension-text { font-family: 'Arial', sans-serif; font-size: 10px; fill: #374151; }
+        .reinforcement-bar { fill: #dc2626; stroke: #991b1b; stroke-width: 0.5; }
+        .concrete-section { fill: #d1d5db; stroke: #6b7280; stroke-width: 1; }
+        .soil-layer { fill: #92400e; stroke: #78350f; stroke-width: 1; opacity: 0.7; }
+        .road-surface { fill: #1f2937; stroke: #111827; stroke-width: 2; }
+        .formation-line { stroke: #dc2626; stroke-width: 2; stroke-dasharray: 5,5; }
+        .tab-active { background: #3b82f6; color: white; }
+        .tab-inactive { background: #e5e7eb; color: #374151; }
+        .formula-display { background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 4px; padding: 8px; font-family: monospace; }
+        .calculation-result { background: #ecfdf5; border-left: 4px solid #10b981; padding: 8px; margin: 4px 0; }
+        .engineering-note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px; font-size: 12px; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white py-4 shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-drafting-compass text-2xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">RajLisp Civil Engineering Studio</h1>
+                        <p class="text-blue-200 text-sm">Modernized CAD Automation - Based on Your College LISP Programs</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="exportBtn" class="bg-blue-800 hover:bg-blue-900 px-4 py-2 rounded-lg flex items-center space-x-2">
+                        <i class="fas fa-download"></i>
+                        <span>Export Drawing</span>
+                    </button>
+                    <button id="helpBtn" class="bg-blue-800 hover:bg-blue-900 px-4 py-2 rounded-lg">
+                        <i class="fas fa-question-circle"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-6">
+        <!-- Module Tabs -->
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button class="tab-btn tab-active px-4 py-2 rounded-lg font-medium" data-module="road">
+                <i class="fas fa-road mr-2"></i>Road Design
+            </button>
+            <button class="tab-btn tab-inactive px-4 py-2 rounded-lg font-medium" data-module="beam">
+                <i class="fas fa-grip-lines mr-2"></i>Beam Design
+            </button>
+            <button class="tab-btn tab-inactive px-4 py-2 rounded-lg font-medium" data-module="column">
+                <i class="fas fa-columns mr-2"></i>Column Design
+            </button>
+            <button class="tab-btn tab-inactive px-4 py-2 rounded-lg font-medium" data-module="footing">
+                <i class="fas fa-th-large mr-2"></i>Foundation
+            </button>
+            <button class="tab-btn tab-inactive px-4 py-2 rounded-lg font-medium" data-module="details">
+                <i class="fas fa-tools mr-2"></i>Construction Details
+            </button>
+        </div>
+
+        <!-- Road Design Module -->
+        <div id="road-module" class="module-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Road Parameters Panel -->
+                <div class="lg:col-span-1">
+                    <div class="parameter-panel p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-bold mb-4 flex items-center">
+                            <i class="fas fa-sliders-h mr-2 text-blue-600"></i>
+                            Road Design Parameters
+                        </h3>
+                        
+                        <!-- Road Type Selection -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">Design Type</label>
+                            <div class="flex space-x-2">
+                                <button id="roadLongBtn" class="road-type-btn bg-blue-600 text-white px-3 py-1 rounded text-sm">Longitudinal Profile</button>
+                                <button id="roadCrossBtn" class="road-type-btn bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm">Cross Section</button>
+                            </div>
+                        </div>
+
+                        <!-- Longitudinal Profile Parameters -->
+                        <div id="roadLongParams" class="road-params">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Road Length (m)</label>
+                                    <input type="number" id="roadLength" value="100" min="10" max="1000" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Survey Interval (m)</label>
+                                    <input type="number" id="surveyInterval" value="10" min="5" max="50" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Maximum Level (m)</label>
+                                    <input type="number" id="maxLevel" value="105.5" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Minimum Level (m)</label>
+                                    <input type="number" id="minLevel" value="98.2" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">NSL of First Point (m)</label>
+                                    <input type="number" id="firstNSL" value="100.5" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cross Section Parameters -->
+                        <div id="roadCrossParams" class="road-params hidden">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Formation Width (m)</label>
+                                    <input type="number" id="formationWidth" value="7.0" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Carriageway Width (m)</label>
+                                    <input type="number" id="carriageWidth" value="5.5" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Carriageway Camber (%)</label>
+                                    <input type="number" id="carriageCamber" value="2.5" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Shoulder Camber (%)</label>
+                                    <input type="number" id="shoulderCamber" value="3.0" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Side Slope (n:1)</label>
+                                    <input type="number" id="sideSlope" value="2.0" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Centre NSL (m)</label>
+                                    <input type="number" id="centreNSL" value="102.5" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Formation Level (m)</label>
+                                    <input type="number" id="formationLevel" value="103.0" step="0.1" class="w-full p-2 border rounded-md">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="generateRoadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg mt-4">
+                            <i class="fas fa-play mr-2"></i>Generate Road Design
+                        </button>
+
+                        <!-- Calculation Display -->
+                        <div id="roadCalculations" class="mt-4 space-y-2">
+                            <div class="formula-display">
+                                <strong>LISP Algorithm Translation:</strong>
+                                <div class="text-xs mt-1">
+                                    <code>DATUM = MIN_LEVEL - (MIN_LEVEL % 5)</code><br>
+                                    <code>NO_POINTS = LENGTH / INTERVAL</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Engineering Notes -->
+                    <div class="mt-4 p-4 bg-white rounded-lg shadow-md">
+                        <h4 class="font-bold mb-2 flex items-center">
+                            <i class="fas fa-info-circle mr-2 text-blue-600"></i>
+                            Engineering Notes
+                        </h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="engineering-note">
+                                <strong>Datum Calculation:</strong> Automatically computed to nearest 5m below minimum level
+                            </div>
+                            <div class="engineering-note">
+                                <strong>Standards:</strong> Based on IRC guidelines for rural road design
+                            </div>
+                            <div class="engineering-note">
+                                <strong>LISP Origin:</strong> Converted from your ROADL.LSP and ROADX.LSP programs
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drawing Canvas -->
+                <div class="lg:col-span-2">
+                    <div class="canvas-container p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-lg">Technical Drawing</h3>
+                            <div class="flex space-x-2">
+                                <button id="zoomInBtn" class="px-2 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
+                                    <i class="fas fa-search-plus"></i>
+                                </button>
+                                <button id="zoomOutBtn" class="px-2 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
+                                    <i class="fas fa-search-minus"></i>
+                                </button>
+                                <button id="resetViewBtn" class="px-2 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300">
+                                    <i class="fas fa-home"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <canvas id="roadCanvas" width="800" height="500" class="w-full engineering-grid border rounded"></canvas>
+                        
+                        <!-- Drawing Legend -->
+                        <div class="mt-3 flex flex-wrap gap-4 text-xs">
+                            <div class="flex items-center"><div class="w-4 h-1 bg-black mr-1"></div>Road Surface</div>
+                            <div class="flex items-center"><div class="w-4 h-1 border-red-600 border-dashed border-2 mr-1"></div>Formation Level</div>
+                            <div class="flex items-center"><div class="w-4 h-1 bg-yellow-700 mr-1"></div>Natural Soil</div>
+                            <div class="flex items-center"><div class="w-4 h-1 bg-gray-400 mr-1"></div>Datum Line</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Beam Design Module -->
+        <div id="beam-module" class="module-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1">
+                    <div class="parameter-panel p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-bold mb-4 flex items-center">
+                            <i class="fas fa-grip-lines mr-2 text-blue-600"></i>
+                            Beam Design Parameters
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Web Width (mm)</label>
+                                <input type="number" id="beamWidth" value="230" min="150" max="500" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Total Depth (mm)</label>
+                                <input type="number" id="beamDepth" value="450" min="200" max="800" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Bottom Bar Diameter (mm)</label>
+                                <select id="bottomBarDia" class="w-full p-2 border rounded-md">
+                                    <option value="12">12mm</option>
+                                    <option value="16" selected>16mm</option>
+                                    <option value="20">20mm</option>
+                                    <option value="25">25mm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Number of Bottom Bars</label>
+                                <input type="number" id="bottomBars" value="4" min="2" max="8" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Top Bar Diameter (mm)</label>
+                                <select id="topBarDia" class="w-full p-2 border rounded-md">
+                                    <option value="12" selected>12mm</option>
+                                    <option value="16">16mm</option>
+                                    <option value="20">20mm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Number of Top Bars</label>
+                                <input type="number" id="topBars" value="2" min="2" max="6" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Stirrup Diameter (mm)</label>
+                                <select id="stirrupDia" class="w-full p-2 border rounded-md">
+                                    <option value="8" selected>8mm</option>
+                                    <option value="10">10mm</option>
+                                    <option value="12">12mm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Stirrup Spacing (mm)</label>
+                                <input type="number" id="stirrupSpacing" value="150" min="75" max="300" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Beam Number</label>
+                                <input type="text" id="beamNumber" value="B-1" class="w-full p-2 border rounded-md">
+                            </div>
+                        </div>
+
+                        <button id="generateBeamBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg mt-4">
+                            <i class="fas fa-play mr-2"></i>Generate Beam Design
+                        </button>
+
+                        <div id="beamCalculations" class="mt-4 space-y-2">
+                            <div class="formula-display">
+                                <strong>From BEAMRECT.LSP:</strong>
+                                <div class="text-xs mt-1">
+                                    <code>DDASB = 25 + (DIA_B / 2)</code><br>
+                                    <code>SPACING = (B - 2*DDAS) / (N-1)</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <div class="canvas-container p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-lg">Beam Cross-Section</h3>
+                        </div>
+                        <canvas id="beamCanvas" width="800" height="500" class="w-full border rounded"></canvas>
+                        <div class="mt-3 flex flex-wrap gap-4 text-xs">
+                            <div class="flex items-center"><div class="w-4 h-4 bg-gray-400 border border-gray-600 mr-1"></div>Concrete</div>
+                            <div class="flex items-center"><div class="w-4 h-4 bg-red-600 rounded-full mr-1"></div>Reinforcement</div>
+                            <div class="flex items-center"><div class="w-4 h-1 bg-gray-600 mr-1"></div>Stirrups</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column Design Module -->
+        <div id="column-module" class="module-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1">
+                    <div class="parameter-panel p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-bold mb-4 flex items-center">
+                            <i class="fas fa-columns mr-2 text-blue-600"></i>
+                            Column Design Parameters
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Column Width (mm)</label>
+                                <input type="number" id="columnWidth" value="300" min="200" max="600" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Column Depth (mm)</label>
+                                <input type="number" id="columnDepth" value="450" min="200" max="800" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Longitudinal Bar Diameter (mm)</label>
+                                <select id="columnBarDia" class="w-full p-2 border rounded-md">
+                                    <option value="12">12mm</option>
+                                    <option value="16" selected>16mm</option>
+                                    <option value="20">20mm</option>
+                                    <option value="25">25mm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Total Number of Bars</label>
+                                <input type="number" id="totalBars" value="8" min="4" max="16" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Bars on Each Face</label>
+                                <input type="number" id="faceBars" value="3" min="2" max="6" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Lateral Tie Diameter (mm)</label>
+                                <select id="tieDia" class="w-full p-2 border rounded-md">
+                                    <option value="8" selected>8mm</option>
+                                    <option value="10">10mm</option>
+                                    <option value="12">12mm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Tie Spacing (mm)</label>
+                                <input type="number" id="tieSpacing" value="200" min="100" max="300" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Column Number</label>
+                                <input type="text" id="columnNumber" value="C-1" class="w-full p-2 border rounded-md">
+                            </div>
+                        </div>
+
+                        <button id="generateColumnBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg mt-4">
+                            <i class="fas fa-play mr-2"></i>Generate Column Design
+                        </button>
+
+                        <div id="columnCalculations" class="mt-4 space-y-2">
+                            <div class="formula-display">
+                                <strong>From COLURECT.LSP:</strong>
+                                <div class="text-xs mt-1">
+                                    <code>NBS = (TOTAL - 2*FACE) / 2</code><br>
+                                    <code>SPACING_H = (B - 2*COVER) / (FACE-1)</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <div class="canvas-container p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-lg">Column Cross-Section</h3>
+                        </div>
+                        <canvas id="columnCanvas" width="800" height="500" class="w-full border rounded"></canvas>
+                        <div class="mt-3 flex flex-wrap gap-4 text-xs">
+                            <div class="flex items-center"><div class="w-4 h-4 bg-gray-400 border border-gray-600 mr-1"></div>Concrete</div>
+                            <div class="flex items-center"><div class="w-4 h-4 bg-red-600 rounded-full mr-1"></div>Longitudinal Bars</div>
+                            <div class="flex items-center"><div class="w-4 h-1 bg-blue-600 mr-1"></div>Lateral Ties</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Foundation Module -->
+        <div id="footing-module" class="module-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <div class="parameter-panel p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-bold mb-4 flex items-center">
+                            <i class="fas fa-th-large mr-2 text-blue-600"></i>
+                            Foundation Parameters
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Footing Width (mm)</label>
+                                <input type="number" id="footingWidth" value="1500" min="800" max="3000" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Footing Depth at Edge (mm)</label>
+                                <input type="number" id="footingDepthEdge" value="300" min="200" max="600" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Footing Depth at Centre (mm)</label>
+                                <input type="number" id="footingDepthCentre" value="450" min="300" max="800" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">PCC Projection (mm)</label>
+                                <input type="number" id="pccProjection" value="75" min="50" max="150" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">PCC Thickness (mm)</label>
+                                <input type="number" id="pccThickness" value="100" min="75" max="150" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">X-Direction Bar Diameter (mm)</label>
+                                <select id="footingBarXDia" class="w-full p-2 border rounded-md">
+                                    <option value="12" selected>12mm</option>
+                                    <option value="16">16mm</option>
+                                    <option value="20">20mm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">X-Direction Bar Spacing (mm)</label>
+                                <input type="number" id="footingBarXSpacing" value="200" min="100" max="300" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Y-Direction Bar Diameter (mm)</label>
+                                <select id="footingBarYDia" class="w-full p-2 border rounded-md">
+                                    <option value="12" selected>12mm</option>
+                                    <option value="16">16mm</option>
+                                    <option value="20">20mm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Y-Direction Bar Spacing (mm)</label>
+                                <input type="number" id="footingBarYSpacing" value="200" min="100" max="300" class="w-full p-2 border rounded-md">
+                            </div>
+                        </div>
+
+                        <button id="generateFootingBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg mt-4">
+                            <i class="fas fa-play mr-2"></i>Generate Foundation Design
+                        </button>
+
+                        <div id="footingCalculations" class="mt-4 space-y-2">
+                            <div class="formula-display">
+                                <strong>From FOOTSQR.LSP:</strong>
+                                <div class="text-xs mt-1">
+                                    <code>NOX = (B - 80) / SPACING_X + 1</code><br>
+                                    <code>NOY = (B - 80) / SPACING_Y + 1</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="canvas-container p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-lg">Foundation Plan & Section</h3>
+                        </div>
+                        <canvas id="footingCanvas" width="600" height="600" class="w-full border rounded"></canvas>
+                        <div class="mt-3 flex flex-wrap gap-4 text-xs">
+                            <div class="flex items-center"><div class="w-4 h-4 bg-gray-400 border border-gray-600 mr-1"></div>Concrete</div>
+                            <div class="flex items-center"><div class="w-4 h-1 bg-red-600 mr-1"></div>Reinforcement X</div>
+                            <div class="flex items-center"><div class="w-4 h-1 bg-blue-600 mr-1"></div>Reinforcement Y</div>
+                            <div class="flex items-center"><div class="w-4 h-4 bg-yellow-600 mr-1"></div>PCC</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Construction Details Module -->
+        <div id="details-module" class="module-content hidden">
+            <div class="text-center py-20">
+                <i class="fas fa-tools text-6xl text-gray-400 mb-6"></i>
+                <h3 class="text-2xl font-bold text-gray-600 mb-4">Construction Details Module</h3>
+                <p class="text-gray-500 mb-6">Advanced features for lintel design, sunshade generation, and detailed reinforcement drawings.</p>
+                <div class="flex justify-center space-x-4">
+                    <button class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-hammer mr-2"></i>Lintel Designer
+                    </button>
+                    <button class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700">
+                        <i class="fas fa-umbrella mr-2"></i>Sunshade Generator
+                    </button>
+                </div>
+                <div class="mt-8 max-w-2xl mx-auto">
+                    <div class="engineering-note">
+                        <strong>Coming Soon:</strong> This module will include advanced construction detailing tools based on your LINTEL.LSP and SUNSHADE.LSP programs, featuring automated reinforcement scheduling, 3D visualization, and code compliance checking.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Information -->
+        <footer class="mt-12 py-6 border-t border-gray-200">
+            <div class="text-center text-sm text-gray-600">
+                <div class="flex items-center justify-center space-x-4 mb-2">
+                    <span><i class="fas fa-code mr-1"></i>Based on Original LISP Programs</span>
+                    <span><i class="fas fa-graduation-cap mr-1"></i>College Engineering Project</span>
+                    <span><i class="fas fa-drafting-compass mr-1"></i>Civil Engineering CAD</span>
+                </div>
+                <p>Modernized civil engineering design tools preserving the computational elegance of LISP programming</p>
+                <div class="mt-2 text-xs text-gray-500">
+                    Original Programs: ROADL.LSP, ROADX.LSP, BEAMRECT.LSP, COLURECT.LSP, FOOTSQR.LSP and more
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Global Variables
+        let currentModule = 'road';
+        let currentRoadType = 'longitudinal';
+        let zoomLevel = 1;
+        let panX = 0, panY = 0;
+
+        // Module Management
+        function switchModule(moduleName) {
+            // Hide all modules
+            document.querySelectorAll('.module-content').forEach(module => {
+                module.classList.add('hidden');
+            });
+            
+            // Show selected module
+            document.getElementById(moduleName + '-module').classList.remove('hidden');
+            
+            // Update tab styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('tab-inactive');
+            });
+            
+            document.querySelector(`[data-module="${moduleName}"]`).classList.add('tab-active');
+            document.querySelector(`[data-module="${moduleName}"]`).classList.remove('tab-inactive');
+            
+            currentModule = moduleName;
+        }
+
+        // Road Design Functions
+        function calculateDatum(minLevel) {
+            const dat1 = Math.floor(minLevel);
+            const dat2 = Math.floor(minLevel / 10);
+            const dat3 = Math.floor(dat1 - (10 * dat2));
+            const dat4 = Math.floor(dat3 / 5);
+            return Math.floor((dat2 * 10) + (5 * dat4));
+        }
+
+        function generateRoadLongitudinal() {
+            const canvas = document.getElementById('roadCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Get parameters
+            const length = parseFloat(document.getElementById('roadLength').value);
+            const interval = parseFloat(document.getElementById('surveyInterval').value);
+            const maxLevel = parseFloat(document.getElementById('maxLevel').value);
+            const minLevel = parseFloat(document.getElementById('minLevel').value);
+            const firstNSL = parseFloat(document.getElementById('firstNSL').value);
+            
+            // Calculate datum (from LISP algorithm)
+            const datum = calculateDatum(minLevel);
+            const noOfPoints = Math.floor(length / interval);
+            
+            // Set up coordinate system
+            const scale = 5; // pixels per meter
+            const originX = 50;
+            const originY = canvas.height - 100;
+            
+            // Draw coordinate system
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 1;
+            
+            // Draw datum line
+            const datumY = originY;
+            ctx.beginPath();
+            ctx.moveTo(originX - 50, datumY);
+            ctx.lineTo(originX + length * scale / 10, datumY);
+            ctx.stroke();
+            
+            // Draw vertical reference lines
+            for (let i = 0; i <= noOfPoints; i++) {
+                const x = originX + (i * interval * scale / 10);
+                ctx.beginPath();
+                ctx.moveTo(x, originY - 50);
+                ctx.lineTo(x, originY + 20);
+                ctx.stroke();
+                
+                // Chainage labels
+                ctx.fillStyle = '#374151';
+                ctx.font = '10px Arial';
+                ctx.fillText((i * interval).toString(), x - 10, originY + 35);
+            }
+            
+            // Draw NSL profile line
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            let currentNSL = firstNSL;
+            let x = originX;
+            let y = originY - (currentNSL - datum) * scale;
+            ctx.moveTo(x, y);
+            
+            // Simulate survey points with some variation
+            for (let i = 1; i <= noOfPoints; i++) {
+                currentNSL += (Math.random() - 0.5) * 2; // Random variation
+                x = originX + (i * interval * scale / 10);
+                y = originY - (currentNSL - datum) * scale;
+                ctx.lineTo(x, y);
+                
+                // Mark survey points
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // NSL labels
+                ctx.fillStyle = '#374151';
+                ctx.font = '8px Arial';
+                ctx.save();
+                ctx.translate(x, y - 15);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(currentNSL.toFixed(2), 0, 0);
+                ctx.restore();
+            }
+            ctx.stroke();
+            
+            // Labels and dimensions
+            ctx.fillStyle = '#374151';
+            ctx.font = '12px Arial';
+            ctx.fillText(`DATUM LEVEL - ${datum.toFixed(1)}M`, originX - 50, datumY + 15);
+            ctx.fillText('NATURAL SOIL LEVEL M', originX - 50, originY - 80);
+            ctx.fillText('CHAINAGE IN M', originX - 50, originY + 50);
+            
+            // Update calculations display
+            const calcDiv = document.getElementById('roadCalculations');
+            calcDiv.innerHTML = `
+                <div class="formula-display">
+                    <strong>LISP Algorithm Results:</strong>
+                    <div class="text-xs mt-1">
+                        <code>DATUM = ${datum.toFixed(1)}m</code><br>
+                        <code>NUMBER_OF_POINTS = ${noOfPoints}</code><br>
+                        <code>SCALE = 1:${Math.round(1000/scale)}</code>
+                    </div>
+                </div>
+                <div class="calculation-result">
+                    Road Length: ${length}m<br>
+                    Survey Interval: ${interval}m<br>
+                    Total Survey Points: ${noOfPoints + 1}
+                </div>
+            `;
+        }
+
+        function generateRoadCrossSection() {
+            const canvas = document.getElementById('roadCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Get parameters
+            const fw = parseFloat(document.getElementById('formationWidth').value);
+            const cw = parseFloat(document.getElementById('carriageWidth').value);
+            const camberC = parseFloat(document.getElementById('carriageCamber').value);
+            const camberS = parseFloat(document.getElementById('shoulderCamber').value);
+            const sideSlope = parseFloat(document.getElementById('sideSlope').value);
+            const centreNSL = parseFloat(document.getElementById('centreNSL').value);
+            const fl = parseFloat(document.getElementById('formationLevel').value);
+            const minLevel = parseFloat(document.getElementById('minLevel').value);
+            
+            // Calculate datum
+            const datum = calculateDatum(minLevel);
+            
+            // Set up coordinate system
+            const scale = 50; // pixels per meter
+            const originX = canvas.width / 2;
+            const originY = canvas.height - 100;
+            
+            // Calculate formation levels (from ROADX.LSP algorithm)
+            const cyf = (fl - datum) * scale;
+            const sw = (fw - cw) / 2;
+            
+            // Formation points
+            const ptfc = [0, -cyf];
+            const ptfl1 = [-(cw/2) * scale, -cyf + (camberC * cw * scale / 200)];
+            const ptfl2 = [-(fw/2) * scale, ptfl1[1] + (camberS * sw * scale / 200)];
+            const r = sideSlope * (-ptfl2[1] / scale);
+            const ptfl3 = [ptfl2[0] - r * scale, 0];
+            
+            const ptfr1 = [(cw/2) * scale, ptfl1[1]];
+            const ptfr2 = [(fw/2) * scale, ptfl2[1]];
+            const ptfr3 = [ptfr2[0] + r * scale, 0];
+            
+            // Draw formation profile
+            ctx.strokeStyle = '#1f2937';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(originX + ptfl3[0], originY + ptfl3[1]);
+            ctx.lineTo(originX + ptfl2[0], originY + ptfl2[1]);
+            ctx.lineTo(originX + ptfl1[0], originY + ptfl1[1]);
+            ctx.lineTo(originX + ptfc[0], originY + ptfc[1]);
+            ctx.lineTo(originX + ptfr1[0], originY + ptfr1[1]);
+            ctx.lineTo(originX + ptfr2[0], originY + ptfr2[1]);
+            ctx.lineTo(originX + ptfr3[0], originY + ptfr3[1]);
+            ctx.stroke();
+            
+            // Draw natural soil level
+            const cynsl = (centreNSL - datum) * scale;
+            ctx.strokeStyle = '#92400e';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(originX + ptfl3[0], originY - cynsl);
+            ctx.lineTo(originX + ptfr3[0], originY - cynsl);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw datum line
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(originX + ptfl3[0] - 50, originY);
+            ctx.lineTo(originX + ptfr3[0] + 50, originY);
+            ctx.stroke();
+            
+            // Add dimensions and labels
+            ctx.fillStyle = '#374151';
+            ctx.font = '10px Arial';
+            ctx.fillText(`Formation Width: ${fw}m`, 10, 20);
+            ctx.fillText(`Carriageway Width: ${cw}m`, 10, 35);
+            ctx.fillText(`Side Slope: ${sideSlope}:1`, 10, 50);
+            ctx.fillText(`DATUM LEVEL: ${datum.toFixed(1)}M`, originX + ptfl3[0] - 100, originY + 20);
+            ctx.fillText('NATURAL SOIL LEVEL', originX + ptfl3[0] - 100, originY - cynsl - 10);
+            ctx.fillText('FORMATION LEVEL', originX + ptfl3[0] - 100, originY + ptfc[1] - 10);
+            
+            // Update calculations
+            const calcDiv = document.getElementById('roadCalculations');
+            calcDiv.innerHTML = `
+                <div class="formula-display">
+                    <strong>Cross-Section Calculations:</strong>
+                    <div class="text-xs mt-1">
+                        <code>SHOULDER_WIDTH = ${sw.toFixed(2)}m</code><br>
+                        <code>SIDE_SLOPE_LENGTH = ${r.toFixed(2)}m</code>
+                    </div>
+                </div>
+                <div class="calculation-result">
+                    Formation Level: ${fl}m<br>
+                    Natural Soil Level: ${centreNSL}m<br>
+                    Cut/Fill: ${(fl - centreNSL).toFixed(2)}m
+                </div>
+            `;
+        }
+
+        // Beam Design Functions
+        function generateBeamDesign() {
+            const canvas = document.getElementById('beamCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Get parameters
+            const b = parseInt(document.getElementById('beamWidth').value);
+            const d = parseInt(document.getElementById('beamDepth').value);
+            const diaB = parseInt(document.getElementById('bottomBarDia').value);
+            const nbb = parseInt(document.getElementById('bottomBars').value);
+            const diaT = parseInt(document.getElementById('topBarDia').value);
+            const nbt = parseInt(document.getElementById('topBars').value);
+            const diaS = parseInt(document.getElementById('stirrupDia').value);
+            const spc = parseInt(document.getElementById('stirrupSpacing').value);
+            const beamNum = document.getElementById('beamNumber').value;
+            
+            // Scale factor for display
+            const scale = 0.8;
+            const originX = canvas.width / 2 - (b * scale) / 2;
+            const originY = canvas.height / 2 + (d * scale) / 2;
+            
+            // Draw beam outline
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#d1d5db';
+            ctx.fillRect(originX, originY - d * scale, b * scale, d * scale);
+            ctx.strokeRect(originX, originY - d * scale, b * scale, d * scale);
+            
+            // Calculate bar positions (from BEAMRECT.LSP)
+            const ddasB = 25 + (diaB / 2);
+            const ddasT = 25 + (diaT / 2);
+            const spacingB = (b - 2 * ddasB) / (nbb - 1);
+            const spacingT = (b - 2 * ddasT) / (nbt - 1);
+            
+            // Draw bottom bars
+            ctx.fillStyle = '#dc2626';
+            for (let i = 0; i < nbb; i++) {
+                const x = originX + ddasB * scale + i * spacingB * scale;
+                const y = originY - ddasB * scale;
+                ctx.beginPath();
+                ctx.arc(x, y, (diaB / 2) * scale, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            // Draw top bars
+            for (let i = 0; i < nbt; i++) {
+                const x = originX + ddasT * scale + i * spacingT * scale;
+                const y = originY - d * scale + ddasT * scale;
+                ctx.beginPath();
+                ctx.arc(x, y, (diaT / 2) * scale, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            // Draw stirrups
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = diaS * scale / 4;
+            const stirrupInset = 25 * scale;
+            const numStirrups = Math.floor(350 / spc); // Assume 350mm effective length
+            
+            for (let i = 0; i < numStirrups; i++) {
+                const x = originX + stirrupInset + i * (spc * scale);
+                ctx.beginPath();
+                ctx.rect(x, originY - d * scale + stirrupInset, 
+                        b * scale - 2 * stirrupInset, 
+                        d * scale - 2 * stirrupInset);
+                ctx.stroke();
+            }
+            
+            // Add dimensions
+            ctx.fillStyle = '#374151';
+            ctx.font = '12px Arial';
+            ctx.fillText(`${b}mm`, originX + (b * scale) / 2 - 15, originY + 25);
+            ctx.fillText(`${d}mm`, originX - 40, originY - (d * scale) / 2);
+            
+            // Add reinforcement details
+            ctx.font = '10px Arial';
+            ctx.fillText(`${nbb} nos. ${diaB}mm dia. bottom bars`, originX + b * scale + 20, originY - 50);
+            ctx.fillText(`${nbt} nos. ${diaT}mm dia. top bars`, originX + b * scale + 20, originY - d * scale + 50);
+            ctx.fillText(`${diaS}mm dia. stirrups @ ${spc}mm c/c`, originX + b * scale + 20, originY - 20);
+            ctx.fillText(`BEAM ${beamNum}`, originX, originY + 50);
+            
+            // Update calculations
+            const calcDiv = document.getElementById('beamCalculations');
+            calcDiv.innerHTML = `
+                <div class="formula-display">
+                    <strong>From BEAMRECT.LSP Algorithm:</strong>
+                    <div class="text-xs mt-1">
+                        <code>DDAS_BOTTOM = ${ddasB}mm</code><br>
+                        <code>DDAS_TOP = ${ddasT}mm</code><br>
+                        <code>SPACING_BOTTOM = ${spacingB.toFixed(1)}mm</code><br>
+                        <code>SPACING_TOP = ${spacingT.toFixed(1)}mm</code>
+                    </div>
+                </div>
+                <div class="calculation-result">
+                    Total Steel Area (Bottom): ${(nbb * Math.PI * Math.pow(diaB/2, 2)).toFixed(0)} mm²<br>
+                    Total Steel Area (Top): ${(nbt * Math.PI * Math.pow(diaT/2, 2)).toFixed(0)} mm²<br>
+                    Steel Ratio: ${((nbb * Math.PI * Math.pow(diaB/2, 2) + nbt * Math.PI * Math.pow(diaT/2, 2)) / (b * d) * 100).toFixed(2)}%
+                </div>
+            `;
+        }
+
+        // Column Design Functions
+        function generateColumnDesign() {
+            const canvas = document.getElementById('columnCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Get parameters
+            const b = parseInt(document.getElementById('columnWidth').value);
+            const d = parseInt(document.getElementById('columnDepth').value);
+            const diaL = parseInt(document.getElementById('columnBarDia').value);
+            const totalBars = parseInt(document.getElementById('totalBars').value);
+            const faceBars = parseInt(document.getElementById('faceBars').value);
+            const tieD = parseInt(document.getElementById('tieDia').value);
+            const tieSpace = parseInt(document.getElementById('tieSpacing').value);
+            const colNum = document.getElementById('columnNumber').value;
+            
+            // Scale factor
+            const scale = 0.6;
+            const originX = canvas.width / 2 - (b * scale) / 2;
+            const originY = canvas.height / 2 + (d * scale) / 2;
+            
+            // Draw column outline
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#d1d5db';
+            ctx.fillRect(originX, originY - d * scale, b * scale, d * scale);
+            ctx.strokeRect(originX, originY - d * scale, b * scale, d * scale);
+            
+            // Calculate intermediate bars (from COLURECT.LSP algorithm)
+            const nbs = Math.floor((totalBars - 2 * faceBars) / 2);
+            const ddasL = 25 + (diaL / 2);
+            const spacingH = (b - 2 * ddasL) / (faceBars - 1);
+            const spacingV = (d - 2 * ddasL) / (nbs + 1);
+            
+            // Draw corner and face bars
+            ctx.fillStyle = '#dc2626';
+            
+            // Bottom face bars
+            for (let i = 0; i < faceBars; i++) {
+                const x = originX + ddasL * scale + i * spacingH * scale;
+                const y = originY - ddasL * scale;
+                ctx.beginPath();
+                ctx.arc(x, y, (diaL / 2) * scale, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            // Top face bars
+            for (let i = 0; i < faceBars; i++) {
+                const x = originX + ddasL * scale + i * spacingH * scale;
+                const y = originY - d * scale + ddasL * scale;
+                ctx.beginPath();
+                ctx.arc(x, y, (diaL / 2) * scale, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            
+            // Intermediate bars on sides
+            if (nbs > 0) {
+                for (let i = 1; i <= nbs; i++) {
+                    // Left side
+                    const xL = originX + ddasL * scale;
+                    const y = originY - ddasL * scale - i * spacingV * scale;
+                    ctx.beginPath();
+                    ctx.arc(xL, y, (diaL / 2) * scale, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Right side
+                    const xR = originX + (b - ddasL) * scale;
+                    ctx.beginPath();
+                    ctx.arc(xR, y, (diaL / 2) * scale, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+            
+            // Draw ties
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = tieD * scale / 3;
+            const tieInset = 25 * scale;
+            
+            ctx.beginPath();
+            ctx.rect(originX + tieInset, originY - d * scale + tieInset, 
+                    b * scale - 2 * tieInset, 
+                    d * scale - 2 * tieInset);
+            ctx.stroke();
+            
+            // Add dimensions
+            ctx.fillStyle = '#374151';
+            ctx.font = '12px Arial';
+            ctx.fillText(`${b}mm`, originX + (b * scale) / 2 - 15, originY + 25);
+            ctx.fillText(`${d}mm`, originX - 40, originY - (d * scale) / 2);
+            
+            // Add reinforcement details
+            ctx.font = '10px Arial';
+            ctx.fillText(`${totalBars} nos. ${diaL}mm dia. longitudinal bars`, originX + b * scale + 20, originY - 50);
+            ctx.fillText(`${tieD}mm dia. lateral ties @ ${tieSpace}mm c/c`, originX + b * scale + 20, originY - 20);
+            ctx.fillText(`COLUMN ${colNum}`, originX, originY + 50);
+            
+            // Update calculations
+            const calcDiv = document.getElementById('columnCalculations');
+            calcDiv.innerHTML = `
+                <div class="formula-display">
+                    <strong>From COLURECT.LSP Algorithm:</strong>
+                    <div class="text-xs mt-1">
+                        <code>INTERMEDIATE_BARS = ${nbs} per side</code><br>
+                        <code>SPACING_HORIZONTAL = ${spacingH.toFixed(1)}mm</code><br>
+                        <code>SPACING_VERTICAL = ${spacingV.toFixed(1)}mm</code>
+                    </div>
+                </div>
+                <div class="calculation-result">
+                    Total Steel Area: ${(totalBars * Math.PI * Math.pow(diaL/2, 2)).toFixed(0)} mm²<br>
+                    Steel Ratio: ${(totalBars * Math.PI * Math.pow(diaL/2, 2) / (b * d) * 100).toFixed(2)}%<br>
+                    Concrete Area: ${(b * d - totalBars * Math.PI * Math.pow(diaL/2, 2)).toFixed(0)} mm²
+                </div>
+            `;
+        }
+
+        // Foundation Design Functions
+        function generateFootingDesign() {
+            const canvas = document.getElementById('footingCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Get parameters
+            const bFooting = parseInt(document.getElementById('footingWidth').value);
+            const depthEdge = parseInt(document.getElementById('footingDepthEdge').value);
+            const depthCentre = parseInt(document.getElementById('footingDepthCentre').value);
+            const pccProj = parseInt(document.getElementById('pccProjection').value);
+            const pccThick = parseInt(document.getElementById('pccThickness').value);
+            const diaX = parseInt(document.getElementById('footingBarXDia').value);
+            const spcX = parseInt(document.getElementById('footingBarXSpacing').value);
+            const diaY = parseInt(document.getElementById('footingBarYDia').value);
+            const spcY = parseInt(document.getElementById('footingBarYSpacing').value);
+            
+            // Scale factor
+            const scale = 0.25;
+            const originX = canvas.width / 2;
+            const originY = canvas.height / 2;
+            
+            // Draw plan view (top half)
+            const planY = originY - 150;
+            
+            // Draw footing plan
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#e5e7eb';
+            const footingSize = bFooting * scale;
+            ctx.fillRect(originX - footingSize/2, planY - footingSize/2, footingSize, footingSize);
+            ctx.strokeRect(originX - footingSize/2, planY - footingSize/2, footingSize, footingSize);
+            
+            // Draw PCC (dashed line)
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#f59e0b';
+            const pccSize = (bFooting + 2 * pccProj) * scale;
+            ctx.strokeRect(originX - pccSize/2, planY - pccSize/2, pccSize, pccSize);
+            ctx.setLineDash([]);
+            
+            // Draw reinforcement grid (from FOOTSQR.LSP algorithm)
+            const nox = Math.floor((bFooting - 80) / spcX) + 1;
+            const noy = Math.floor((bFooting - 80) / spcY) + 1;
+            const actualSpcX = (bFooting - 80) / (nox - 1);
+            const actualSpcY = (bFooting - 80) / (noy - 1);
+            
+            // X-direction bars
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < nox; i++) {
+                const x = originX - footingSize/2 + 40 * scale + i * actualSpcX * scale;
+                ctx.beginPath();
+                ctx.moveTo(x, planY - footingSize/2 + 40 * scale);
+                ctx.lineTo(x, planY + footingSize/2 - 40 * scale);
+                ctx.stroke();
+            }
+            
+            // Y-direction bars
+            ctx.strokeStyle = '#3b82f6';
+            for (let i = 0; i < noy; i++) {
+                const y = planY - footingSize/2 + 40 * scale + i * actualSpcY * scale;
+                ctx.beginPath();
+                ctx.moveTo(originX - footingSize/2 + 40 * scale, y);
+                ctx.lineTo(originX + footingSize/2 - 40 * scale, y);
+                ctx.stroke();
+            }
+            
+            // Draw section view (bottom half)
+            const sectionY = originY + 150;
+            
+            // Draw footing section
+            ctx.fillStyle = '#d1d5db';
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 2;
+            
+            // Footing profile
+            ctx.beginPath();
+            ctx.moveTo(originX - footingSize/2, sectionY);
+            ctx.lineTo(originX - footingSize/2, sectionY - depthEdge * scale);
+            ctx.lineTo(originX - 150 * scale, sectionY - depthCentre * scale);
+            ctx.lineTo(originX + 150 * scale, sectionY - depthCentre * scale);
+            ctx.lineTo(originX + footingSize/2, sectionY - depthEdge * scale);
+            ctx.lineTo(originX + footingSize/2, sectionY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Draw PCC
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(originX - pccSize/2, sectionY, pccSize, -pccThick * scale);
+            ctx.strokeRect(originX - pccSize/2, sectionY, pccSize, -pccThick * scale);
+            
+            // Draw reinforcement bars in section
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = diaX * scale / 2;
+            ctx.beginPath();
+            ctx.moveTo(originX - footingSize/2 + 40 * scale, sectionY - 40 * scale);
+            ctx.lineTo(originX + footingSize/2 - 40 * scale, sectionY - 40 * scale);
+            ctx.stroke();
+            
+            // Add labels
+            ctx.fillStyle = '#374151';
+            ctx.font = '10px Arial';
+            ctx.fillText('PLAN', originX - 20, planY - footingSize/2 - 20);
+            ctx.fillText('SECTION', originX - 25, sectionY + 40);
+            ctx.fillText(`${bFooting}mm`, originX - 20, planY + footingSize/2 + 20);
+            ctx.fillText(`${depthCentre}mm`, originX + footingSize/2 + 10, sectionY - depthCentre * scale / 2);
+            
+            // Update calculations
+            const calcDiv = document.getElementById('footingCalculations');
+            calcDiv.innerHTML = `
+                <div class="formula-display">
+                    <strong>From FOOTSQR.LSP Algorithm:</strong>
+                    <div class="text-xs mt-1">
+                        <code>NOX = ${nox} bars</code><br>
+                        <code>NOY = ${noy} bars</code><br>
+                        <code>ACTUAL_SPACING_X = ${actualSpcX.toFixed(1)}mm</code><br>
+                        <code>ACTUAL_SPACING_Y = ${actualSpcY.toFixed(1)}mm</code>
+                    </div>
+                </div>
+                <div class="calculation-result">
+                    Footing Volume: ${(bFooting * bFooting * depthCentre / 1000000).toFixed(2)} m³<br>
+                    Steel (X-dir): ${nox} × ${diaX}mm @ ${spcX}mm c/c<br>
+                    Steel (Y-dir): ${noy} × ${diaY}mm @ ${spcY}mm c/c<br>
+                    PCC Volume: ${((bFooting + 2*pccProj) * (bFooting + 2*pccProj) * pccThick / 1000000).toFixed(2)} m³
+                </div>
+            `;
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    switchModule(this.dataset.module);
+                });
+            });
+
+            // Road type switching
+            document.getElementById('roadLongBtn').addEventListener('click', function() {
+                document.getElementById('roadLongParams').classList.remove('hidden');
+                document.getElementById('roadCrossParams').classList.add('hidden');
+                this.classList.add('bg-blue-600', 'text-white');
+                this.classList.remove('bg-gray-300', 'text-gray-700');
+                document.getElementById('roadCrossBtn').classList.remove('bg-blue-600', 'text-white');
+                document.getElementById('roadCrossBtn').classList.add('bg-gray-300', 'text-gray-700');
+                currentRoadType = 'longitudinal';
+            });
+
+            document.getElementById('roadCrossBtn').addEventListener('click', function() {
+                document.getElementById('roadCrossParams').classList.remove('hidden');
+                document.getElementById('roadLongParams').classList.add('hidden');
+                this.classList.add('bg-blue-600', 'text-white');
+                this.classList.remove('bg-gray-300', 'text-gray-700');
+                document.getElementById('roadLongBtn').classList.remove('bg-blue-600', 'text-white');
+                document.getElementById('roadLongBtn').classList.add('bg-gray-300', 'text-gray-700');
+                currentRoadType = 'cross';
+            });
+
+            // Generate buttons
+            document.getElementById('generateRoadBtn').addEventListener('click', function() {
+                if (currentRoadType === 'longitudinal') {
+                    generateRoadLongitudinal();
+                } else {
+                    generateRoadCrossSection();
+                }
+            });
+
+            document.getElementById('generateBeamBtn').addEventListener('click', generateBeamDesign);
+            document.getElementById('generateColumnBtn').addEventListener('click', generateColumnDesign);
+            document.getElementById('generateFootingBtn').addEventListener('click', generateFootingDesign);
+
+            // Parameter change listeners for real-time updates
+            const roadParams = ['roadLength', 'surveyInterval', 'maxLevel', 'minLevel', 'firstNSL',
+                              'formationWidth', 'carriageWidth', 'carriageCamber', 'shoulderCamber', 
+                              'sideSlope', 'centreNSL', 'formationLevel'];
+            
+            roadParams.forEach(param => {
+                const element = document.getElementById(param);
+                if (element) {
+                    element.addEventListener('input', function() {
+                        // Auto-generate on parameter change for better UX
+                        setTimeout(() => {
+                            if (currentRoadType === 'longitudinal') {
+                                generateRoadLongitudinal();
+                            } else {
+                                generateRoadCrossSection();
+                            }
+                        }, 500); // Debounce for 500ms
+                    });
+                }
+            });
+
+            // Canvas zoom and pan
+            ['roadCanvas', 'beamCanvas', 'columnCanvas', 'footingCanvas'].forEach(canvasId => {
+                const canvas = document.getElementById(canvasId);
+                if (canvas) {
+                    canvas.addEventListener('wheel', function(e) {
+                        e.preventDefault();
+                        // Zoom functionality can be added here
+                    });
+                }
+            });
+
+            // Export functionality
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                // This would trigger browser's built-in PDF export
+                window.print();
+            });
+
+            // Help functionality
+            document.getElementById('helpBtn').addEventListener('click', function() {
+                alert('RajLisp Civil Engineering Studio\n\nThis application modernizes your college LISP programs:\n\n' +
+                      '• Road Design: Based on ROADL.LSP and ROADX.LSP\n' +
+                      '• Beam Design: From BEAMRECT.LSP algorithms\n' +
+                      '• Column Design: Using COLURECT.LSP logic\n' +
+                      '• Foundation: Implementing FOOTSQR.LSP calculations\n\n' +
+                      'All calculations preserve the original LISP mathematical relationships while providing a modern interface.');
+            });
+
+            // Initialize with road longitudinal profile
+            generateRoadLongitudinal();
+        });
+    </script>
+</body>
+</html>

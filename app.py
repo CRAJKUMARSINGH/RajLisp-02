@@ -11,7 +11,7 @@ try:
         circular_column, rectangular_column, rect_column_footing, 
         circular_column_footing, sunshade, lintel, t_beam, l_beam,
         staircase, road_lsection, road_plan, road_cross_section,
-        pmgsy_road, bridge
+        pmgsy_road, bridge, rectangular_beam
     )
 except ImportError as e:
     st.error(f"Error importing modules: {str(e)}")
@@ -79,8 +79,9 @@ def main():
         beam_modules = [
             "🌞 Sunshade",
             "🔗 Lintel", 
-            "📐 T-Beam",
-            "📏 L-Beam"
+            "📏 T-Beam",
+            "📐 L-Beam",
+            "📏 Rectangular Beam"
         ]
         
         misc_modules = [
@@ -144,12 +145,16 @@ def main():
         sunshade.page_sunshade()
     elif page == "🔗 Lintel":
         lintel.page_lintel()
-    elif page == "📐 T-Beam":
+    elif page == "📏 T-Beam":
         t_beam.page_t_beam()
-    elif page == "📏 L-Beam":
+    elif page == "📐 L-Beam":
         l_beam.page_l_beam()
+    elif page == "📏 Rectangular Beam":
+        rectangular_beam.page_rectangular_beam()
     elif page == "🪜 Staircase":
         staircase.page_staircase()
+    elif page == "🌉 Bridge":
+        bridge.page_bridge()
 
     elif page == "🛣️ Road L-Section":
         road_lsection.page_road_lsection()
